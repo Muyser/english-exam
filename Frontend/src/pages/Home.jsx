@@ -24,11 +24,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
       <header className="sticky top-0 z-20 backdrop-blur bg-white/80 border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
+        <div className="max-w-5xl mx-auto px-5 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img 
+              src="./noor.jpeg" 
+              alt="Logo" 
+              className="h-12 w-auto object-contain rounded-lg shrink-0" 
+            />
             <div className="leading-tight">
               <div className="text-sm font-semibold tracking-tight text-slate-900">{t('common.brand')}</div>
               <div className="text-[11px] text-muted-foreground">{t('home.assessment')}</div>

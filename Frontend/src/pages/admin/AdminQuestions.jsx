@@ -37,7 +37,7 @@ export default function AdminQuestions() {
   const [deleting, setDeleting] = useState(false);
   const [viewTarget, setViewTarget] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://english-grammer-exam.onrender.com';
 
   // Helper function to send authenticated requests
   const authFetch = async (endpoint, options = {}) => {

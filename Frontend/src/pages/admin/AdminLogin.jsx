@@ -19,7 +19,7 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
 
   // Read environment variable with local fallback
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://english-grammer-exam.onrender.com';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
