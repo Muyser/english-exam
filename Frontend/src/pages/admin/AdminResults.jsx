@@ -54,13 +54,22 @@ export default function AdminResults() {
     try {
       const data = await authFetch('/api/results');
       const normalized = (data || []).map((r) => {
-        const total = r.totalQuestions || r.totalMarks || 0;
         const correct = r.correctAnswers || 0;
-        const wrong = r.wrongAnswers !== undefined ? r.wrongAnswers : Math.max(0, total - correct);
+        const totalQ = r.totalQuestions || 50;
+        const wrong = r.wrongAnswers !== undefined ? r.wrongAnswers : Math.max(0, totalQ - correct);
+
+        // 2 marks per question => total score out of 100
+        const calculatedScore = r.score !== undefined ? r.score : correct * 2;
+        const calculatedPercentage = Math.round((calculatedScore / 100) * 100);
 
         return {
           ...r,
           id: r._id || r.id,
+          score: calculatedScore,
+          totalMarks: 100,
+          totalQuestions: totalQ,
+          percentage: calculatedPercentage,
+          correctAnswers: correct,
           wrongAnswers: wrong,
           created_date: r.created_date || r.createdAt || new Date().toISOString(),
         };
@@ -166,8 +175,8 @@ export default function AdminResults() {
                   <th className="text-start font-medium px-4 py-3">{isAr ? 'الطالب' : 'Student'}</th>
                   <th className="text-center font-medium px-4 py-3">{isAr ? 'الدرجة' : 'Score'}</th>
                   <th className="text-center font-medium px-4 py-3">%</th>
-                  <th className="text-center font-medium px-4 py-3">{isAr ? 'صحيحة' : 'Correct'}</th>
-                  <th className="text-center font-medium px-4 py-3">{isAr ? 'خاطئة' : 'Wrong'}</th>
+                  <th className="text-center font-medium px-4 py-3">{isAr ? 'أسئلة صحيحة' : 'Correct Questions'}</th>
+                  <th className="text-center font-medium px-4 py-3">{isAr ? 'أسئلة خاطئة' : 'Wrong Questions'}</th>
                   <th className="text-start font-medium px-4 py-3 hidden md:table-cell">{isAr ? 'التاريخ' : 'Date'}</th>
                   <th className="text-start font-medium px-4 py-3 hidden md:table-cell">{isAr ? 'الوقت' : 'Time'}</th>
                   <th className="px-4 py-3 text-end font-medium">{isAr ? 'الإجراءات' : 'Actions'}</th>
@@ -179,15 +188,15 @@ export default function AdminResults() {
                   return (
                     <tr key={r.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-medium text-slate-900">{r.studentName}</td>
-                      <td className="px-4 py-3 text-center text-slate-900 font-medium tabular-nums">{r.score}/{r.totalMarks || r.totalQuestions}</td>
+                      <td className="px-4 py-3 text-center text-slate-900 font-medium tabular-nums">{r.score}/100</td>
                       <td className="px-4 py-3 text-center">
                         <span className={cn('inline-block px-2 py-0.5 rounded-full text-xs font-semibold',
                           pct >= 75 ? 'bg-emerald-50 text-emerald-700' : pct >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600')}>
                           {pct}%
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center text-emerald-600 font-medium">{r.correctAnswers}</td>
-                      <td className="px-4 py-3 text-center text-red-500 font-medium">{r.wrongAnswers}</td>
+                      <td className="px-4 py-3 text-center text-emerald-600 font-medium">{r.correctAnswers}/{r.totalQuestions}</td>
+                      <td className="px-4 py-3 text-center text-red-500 font-medium">{r.wrongAnswers}/{r.totalQuestions}</td>
                       <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{new Date(r.created_date).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{new Date(r.created_date).toLocaleTimeString()}</td>
                       <td className="px-4 py-3 text-end">
@@ -221,10 +230,10 @@ export default function AdminResults() {
             <dl className="divide-y divide-slate-100">
               {[
                 [isAr ? 'اسم الطالب' : 'Student Name', viewTarget.studentName],
-                [isAr ? 'الدرجة' : 'Score', `${viewTarget.score} / ${viewTarget.totalMarks || viewTarget.totalQuestions}`],
+                [isAr ? 'الدرجة الكلية' : 'Total Mark', `${viewTarget.score} / 100`],
                 [isAr ? 'النسبة المئوية' : 'Percentage', `${viewTarget.percentage}%`],
-                [isAr ? 'الإجابات الصحيحة' : 'Correct Answers', viewTarget.correctAnswers],
-                [isAr ? 'الإجابات الخاطئة' : 'Wrong Answers', viewTarget.wrongAnswers],
+                [isAr ? 'الأسئلة الصحيحة' : 'Correct Questions', `${viewTarget.correctAnswers} / ${viewTarget.totalQuestions}`],
+                [isAr ? 'الأسئلة الخاطئة' : 'Wrong Questions', `${viewTarget.wrongAnswers} / ${viewTarget.totalQuestions}`],
                 [isAr ? 'اسم الامتحان' : 'Exam Name', viewTarget.examName || 'Final Grammar Exam'],
                 [isAr ? 'التاريخ' : 'Date', new Date(viewTarget.created_date).toLocaleDateString()],
                 [isAr ? 'الوقت' : 'Time', new Date(viewTarget.created_date).toLocaleTimeString()],
