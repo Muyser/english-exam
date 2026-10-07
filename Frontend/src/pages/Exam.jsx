@@ -56,7 +56,7 @@ export default function Exam() {
   const startedAtRef = useRef(null);
   const submittedRef = useRef(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'VITE_API_URL=https://english-grammer-exam.onrender.com';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://english-grammer-exam.onrender.com';
 
   useEffect(() => { answersRef.current = answers; }, [answers]);
   useEffect(() => { questionsRef.current = questions; }, [questions]);
@@ -221,21 +221,23 @@ export default function Exam() {
           </div>
 
           {isAr ? (
-            <div className="space-y-4">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
-                🎉 مبروك على إكمال الامتحان! 🎓✨
-              </h1>
-              <p className="text-slate-700 text-base leading-relaxed">
-                👏 نتمنى لك دوام التوفيق والنجاح في خطواتك القادمة، ونتمنى أن تحقق المزيد من الإنجازات بإذن الله. 🌟📚
-              </p>
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 text-sm leading-relaxed my-2">
-                📩 نود إعلامك بأن نتيجتك قد تم إرسالها إلى الإدارة لمراجعتها واتخاذ الإجراءات اللازمة. ✅
-              </div>
-              <div className="pt-2 text-slate-800 font-medium text-sm">
-                🌹 مع خالص تمنياتنا لك بالتوفيق والنجاح، <br />
-                <span className="font-bold text-blue-600 text-base">💙 أكاديمية نور 🎓✨</span>
-              </div>
+            <div className="space-y-3 text-center">
+            <h1 className="text-xl font-bold text-slate-900">
+                مبروك إكمال الامتحان! 
+            </h1>
+            
+            <p className="text-sm text-slate-600">
+              نتمنى لك دوام التوفيق والنجاح. 
+            </p>
+
+            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                تم إرسال نتيجتك للإدارة للمراجعة. 
             </div>
+
+            <div className="text-xs text-slate-500 pt-1">
+              مع تحيات <span className="font-semibold text-blue-600">أكاديمية نور</span> 🎓
+            </div>
+          </div>
           ) : (
             <div className="space-y-4">
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
