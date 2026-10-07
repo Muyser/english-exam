@@ -221,36 +221,39 @@ export default function Exam() {
           </div>
 
           {isAr ? (
-            <div className="space-y-3 text-center">
-            <h1 className="text-xl font-bold text-slate-900">
-                مبروك إكمال الامتحان! 
-            </h1>
-            
-            <p className="text-sm text-slate-600">
-              نتمنى لك دوام التوفيق والنجاح. 
-            </p>
-
-            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
-                تم إرسال نتيجتك للإدارة للمراجعة. 
+            <div className="space-y-4 text-center max-w-md mx-auto p-6 bg-white rounded-2xl shadow-sm border border-slate-100" dir="rtl">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                🎉 ألف مبروك!
+              </h1>
+              <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                لقد أتممت بنجاح الامتحان النهائي للقواعد الختامي في اللغة الإنجليزية. <br />
+                نتمنى لك كل التوفيق والنجاح 🌟
+              </p>
             </div>
 
-            <div className="text-xs text-slate-500 pt-1">
-              مع تحيات <span className="font-semibold text-blue-600">أكاديمية نور</span> 🎓
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 leading-relaxed">
+              📩 تم تسليم نتيجتك إلى الإدارة للمراجعة والاعتماد. <br />
+              انتظر ظهور النتيجة قريبًا.
+            </div>
+
+            <div className="pt-2 text-xs font-semibold text-blue-600 flex items-center justify-center gap-1">
+              <span>شكرًا لك وبالتوفيق دائمًا!</span> 💙
             </div>
           </div>
           ) : (
             <div className="space-y-4">
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight leading-snug">
-                🎉 Congratulations on Completing Your Exam! 🎓✨
+                🎉 Congratulations! 🎓✨
               </h1>
               <p className="text-slate-700 text-base leading-relaxed">
-                👏 We wish you continued success in your upcoming steps and hope you achieve all your future goals. 🌟📚
+                You have successfully completed the Final English Grammar Exam. We wish you all the best and continued success! 🌟
               </p>
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 text-sm leading-relaxed my-2">
-                📩 Your exam results have been successfully sent to the administration for review. ✅
+                📩 Your result has been submitted to the administration for review and approval. Please check back soon. ✅
               </div>
               <div className="pt-2 text-slate-800 font-medium text-sm">
-                🌹 Best wishes for your future endeavors, <br />
+                Thank you and best luck always! <br />
                 <span className="font-bold text-blue-600 text-base">💙 Nour Academy 🎓✨</span>
               </div>
             </div>
