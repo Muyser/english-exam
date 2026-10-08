@@ -101,7 +101,7 @@ export default function Exam() {
       }
     })();
     return () => { alive = false; };
-  }, [navigate, API_URL]);
+  }, [navigate, API_URL, isAr]);
 
   const doSubmit = useCallback(async () => {
     if (submittedRef.current) return;
@@ -208,7 +208,7 @@ export default function Exam() {
     );
   }
 
-  // Beautiful Congratulations Success Screen
+  // Congratulations Success Screen
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50/50 via-white to-slate-50 flex items-center justify-center p-5">
@@ -222,25 +222,25 @@ export default function Exam() {
 
           {isAr ? (
             <div className="space-y-4 text-center max-w-md mx-auto p-6 bg-white rounded-2xl shadow-sm border border-slate-100" dir="rtl">
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                🎉 ألف مبروك!
-              </h1>
-              <p className="text-sm font-medium text-slate-700 leading-relaxed">
-                لقد أتممت بنجاح الامتحان النهائي للقواعد الختامي في اللغة الإنجليزية. <br />
-                نتمنى لك كل التوفيق والنجاح 🌟
-              </p>
-            </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                  🎉 ألف مبروك!
+                </h1>
+                <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                  لقد أتممت بنجاح الامتحان النهائي للقواعد الختامي في اللغة الإنجليزية. <br />
+                  نتمنى لك كل التوفيق والنجاح 🌟
+                </p>
+              </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 leading-relaxed">
-              📩 تم تسليم نتيجتك إلى الإدارة للمراجعة والاعتماد. <br />
-              انتظر ظهور النتيجة قريبًا.
-            </div>
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 leading-relaxed">
+                📩 تم تسليم نتيجتك إلى الإدارة للمراجعة والاعتماد. <br />
+                انتظر ظهور النتيجة قريبًا.
+              </div>
 
-            <div className="pt-2 text-xs font-semibold text-blue-600 flex items-center justify-center gap-1">
-              <span>شكرًا لك وبالتوفيق دائمًا!</span> 💙
+              <div className="pt-2 text-xs font-semibold text-blue-600 flex items-center justify-center gap-1">
+                <span>شكرًا لك وبالتوفيق دائمًا!</span> 💙
+              </div>
             </div>
-          </div>
           ) : (
             <div className="space-y-4">
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight leading-snug">

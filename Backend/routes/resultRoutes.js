@@ -1,6 +1,8 @@
 import express from 'express';
 import {
   createResult,
+  getResultPDF,
+  getAllResultsPDF,
   getResults,
   getResultById,
   deleteResult,
@@ -10,13 +12,14 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-
-// Public route: Students submit their exam results
+// Public route
 router.post('/', createResult);
 
-// All exam result routes are protected by admin authentication
+// Protected Admin Routes
 router.get('/', protect, getResults);
+router.get('/export-pdf', protect, getAllResultsPDF); 
 router.get('/:id', protect, getResultById);
+router.get('/:id/pdf', protect, getResultPDF);
 router.delete('/:id', protect, deleteResult);
 router.delete('/', protect, deleteAllResults);
 
