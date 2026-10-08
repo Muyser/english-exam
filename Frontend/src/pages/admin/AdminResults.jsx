@@ -106,7 +106,7 @@ export default function AdminResults() {
     }
   };
 
-  // Download combined PDF report of all results
+  // Download combined PDF report of all student results from Backend
   const handleDownloadAllPDF = async () => {
     setDownloadingAll(true);
     try {
@@ -137,7 +137,7 @@ export default function AdminResults() {
     }
   };
 
-  // Download single student PDF
+  // Download single student PDF report from Backend
   const handleDownloadPDF = async (result) => {
     setDownloadingId(result.id);
     try {
@@ -188,7 +188,7 @@ export default function AdminResults() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header and Export All Action */}
+      {/* Header and Export Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{isAr ? 'نتائج الامتحانات' : 'Exam Results'}</h1>
@@ -209,7 +209,7 @@ export default function AdminResults() {
         </button>
       </div>
 
-      {/* Search & Filter Bar */}
+      {/* Filter Bar */}
       <Card className="p-3 sm:p-4 border-slate-200 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
@@ -250,7 +250,7 @@ export default function AdminResults() {
           </div>
         ) : (
           <>
-            {/* Table for Desktop */}
+            {/* Desktop Table */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-xs text-muted-foreground border-b border-slate-200">
