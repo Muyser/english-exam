@@ -96,21 +96,23 @@ export const getAllResultsPDF = async (req, res) => {
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
 
+    // Set headers before piping
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="All_Exam_Results_${new Date().toISOString().split('T')[0]}.pdf"`
     );
 
+    // Pipe PDF to response
     doc.pipe(res);
 
-    // Title & Metadata
+    // Header
     doc.fillColor('#0f172a').fontSize(20).font('Helvetica-Bold').text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).font('Helvetica-Bold').text('All Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
 
-    doc.fillColor('#64748b').fontSize(9).font('Helvetica').text(`Total Students: ${results.length}  |  Generated on: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.fillColor('#64748b').fontSize(9).font('Helvetica').text(`Total Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
     doc.moveDown(1);
 
     const startX = 40;
@@ -147,10 +149,8 @@ export const getAllResultsPDF = async (req, res) => {
       const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
       doc.rect(startX, y, 515, 20).fillAndStroke(bgColor, '#f1f5f9');
 
-      const displayName = formatRTL(r.studentName);
-
       doc.fillColor('#0f172a').fontSize(9).font('Helvetica');
-      doc.text(displayName, startX + 10, y + 5, { width: 150, ellipsis: true });
+      doc.text(r.studentName || '—', startX + 10, y + 5, { width: 150, ellipsis: true });
       doc.text(`${score} / 100`, startX + 170, y + 5, { width: 60, align: 'center' });
 
       const pctColor = pct >= 75 ? '#15803d' : pct >= 50 ? '#b45309' : '#dc2626';
@@ -169,10 +169,15 @@ export const getAllResultsPDF = async (req, res) => {
       y += 20;
     });
 
+    // Finalize PDF
     doc.end();
   } catch (error) {
-    console.error('Error in getAllResultsPDF:', error);
-    res.status(500).json({ message: error.message });
+    console.error('PDF Generation Error:', error);
+
+    // Safeguard: only send JSON response if headers haven't been sent yet
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate PDF: ' + error.message });
+    }
   }
 };
 
