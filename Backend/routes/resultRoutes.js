@@ -12,12 +12,12 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Public route
+// Public route for students
 router.post('/', createResult);
 
-// Protected Admin Routes
+// Admin protected routes
 router.get('/', protect, getResults);
-router.get('/export-pdf', protect, getAllResultsPDF); 
+router.get('/export-pdf', protect, getAllResultsPDF);
 router.get('/:id', protect, getResultById);
 router.get('/:id/pdf', protect, getResultPDF);
 router.delete('/:id', protect, deleteResult);

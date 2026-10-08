@@ -2,98 +2,34 @@ import ExamResult from '../models/ExamResult.js';
 import PDFDocument from 'pdfkit';
 import bidiFactory from 'bidi-js';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// Helper function to build and stream PDF report
-const generateResultPDF = (result, res) => {
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${result.studentName}_Exam_Result.pdf"`);
+const bidi = bidiFactory();
 
-  doc.pipe(res);
+// Helper to reorder Arabic / RTL text so PDFKit renders it correctly
+function formatRTL(text) {
+  if (!text) return '—';
+  const containsArabic = /[\u0600-\u06FF]/.test(text);
+  if (!containsArabic) return text;
+  return bidi.getReorderedString(text, 'rtl');
+}
 
-  // Header Branding
-  doc.fillColor('#0f172a').fontSize(22).font('Helvetica-Bold').text('Nour Academy', { align: 'center' });
-  doc.moveDown(0.3);
-  doc.fillColor('#2563eb').fontSize(14).font('Helvetica-Bold').text('Official Exam Result Report', { align: 'center' });
-  doc.moveDown(1);
-
-  // Divider Line
-  doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#e2e8f0').lineWidth(1).stroke();
-  doc.moveDown(1.5);
-
-  // Student Info Details
-  doc.fillColor('#0f172a').fontSize(12).font('Helvetica-Bold').text('Student Name: ', { continued: true });
-  doc.font('Helvetica').text(result.studentName);
-  doc.moveDown(0.5);
-
-  const dateStr = result.createdAt ? new Date(result.createdAt).toLocaleDateString() : new Date().toLocaleDateString();
-  doc.font('Helvetica-Bold').text('Exam Date: ', { continued: true });
-  doc.font('Helvetica').text(dateStr);
-  doc.moveDown(0.5);
-
-  const statusText = result.status === 'passed' ? 'PASSED 🎉' : 'FAILED';
-  const statusColor = result.status === 'passed' ? '#16a34a' : '#dc2626';
-  doc.font('Helvetica-Bold').text('Status: ', { continued: true });
-  doc.fillColor(statusColor).font('Helvetica-Bold').text(statusText);
-  doc.moveDown(1.5);
-
-  // Score Summary Card Box
-  const startY = doc.y;
-  doc.rect(50, startY, 495, 120).fillAndStroke('#f8fafc', '#cbd5e1');
-
-  doc.fillColor('#0f172a').fontSize(12).font('Helvetica-Bold');
-  doc.text(`Total Score: ${result.score} / 100`, 70, startY + 18);
-  doc.text(`Percentage: ${result.percentage}%`, 70, startY + 42);
-  doc.text(`Correct Questions: ${result.correctAnswers} / ${result.totalQuestions}`, 70, startY + 66);
-  doc.text(`Wrong Questions: ${Math.max(0, result.totalQuestions - result.correctAnswers)} / ${result.totalQuestions}`, 70, startY + 90);
-
-  doc.moveDown(4);
-
-  // Footer Message
-  doc.fillColor('#64748b').fontSize(10).font('Helvetica-Oblique').text('Thank you for completing your exam with Nour Academy. Wish you all the best!', 50, 700, { align: 'center', width: 495 });
-
-  doc.end();
-};
-
-// Create a new exam result (For Students)
-export const createResult = async (req, res) => {
-  try {
-    const {
-      studentName,
-      score,
-      totalQuestions,
-      correctAnswers,
-      percentage,
-      status,
-      timeSpent,
-      answersSummary,
-    } = req.body;
-
-    const newResult = new ExamResult({
-      studentName,
-      score,
-      totalQuestions,
-      correctAnswers,
-      percentage,
-      status,
-      timeSpent,
-      answersSummary,
-    });
-
-    const savedResult = await newResult.save();
-
-    res.status(201).json({
-      message: 'Exam submitted successfully',
-      resultId: savedResult._id,
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+// Helper to configure fonts safely
+function applyFont(doc) {
+  const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
+  if (fs.existsSync(fontPath)) {
+    doc.registerFont('AmiriFont', fontPath);
+    doc.font('AmiriFont');
+  } else {
+    doc.font('Helvetica');
   }
-};
+}
 
-// Protected: Stream PDF report for an exam result
+// 1. Download Single Student PDF
 export const getResultPDF = async (req, res) => {
   try {
     const result = await ExamResult.findById(req.params.id);
@@ -101,97 +37,75 @@ export const getResultPDF = async (req, res) => {
       return res.status(404).json({ message: 'Exam result not found' });
     }
 
-    generateResultPDF(result, res);
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(result.studentName)}_Result.pdf"`
+    );
+
+    doc.pipe(res);
+    applyFont(doc);
+
+    // Header
+    doc.fontSize(22).text('Nour Academy', { align: 'center' });
+    doc.moveDown(0.3);
+    doc.fontSize(14).text('Official Exam Result Report', { align: 'center' });
+    doc.moveDown(1);
+
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#e2e8f0').lineWidth(1).stroke();
+    doc.moveDown(1.5);
+
+    // Student Info
+    const studentNameFormatted = formatRTL(result.studentName);
+    doc.fontSize(12).text(`Student Name / اسم الطالب: ${studentNameFormatted}`);
+    doc.moveDown(0.5);
+
+    const dateStr = result.createdAt ? new Date(result.createdAt).toLocaleDateString() : new Date().toLocaleDateString();
+    doc.text(`Exam Date / تاريخ الامتحان: ${dateStr}`);
+    doc.moveDown(0.5);
+
+    const statusText = result.status === 'passed' ? 'PASSED / ناجح 🎉' : 'FAILED / راسب';
+    doc.text(`Status / الحالة: ${statusText}`);
+    doc.moveDown(1.5);
+
+    // Score Summary Box
+    const startY = doc.y;
+    doc.rect(50, startY, 495, 120).fillAndStroke('#f8fafc', '#cbd5e1');
+
+    doc.fillColor('#0f172a').fontSize(12);
+    doc.text(`Total Score / الدرجة الكلية: ${result.score} / 100`, 70, startY + 18);
+    doc.text(`Percentage / النسبة المئوية: ${result.percentage}%`, 70, startY + 42);
+    doc.text(`Correct Questions / الأسئلة الصحيحة: ${result.correctAnswers} / ${result.totalQuestions}`, 70, startY + 66);
+    doc.text(`Wrong Questions / الأسئلة الخاطئة: ${Math.max(0, result.totalQuestions - result.correctAnswers)} / ${result.totalQuestions}`, 70, startY + 90);
+
+    doc.moveDown(4);
+    doc.fillColor('#64748b').fontSize(10).text('Thank you for completing your exam with Nour Academy.', 50, 700, { align: 'center', width: 495 });
+
+    doc.end();
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get all student exam results
-export const getResults = async (req, res) => {
-  try {
-    const results = await ExamResult.find().sort({ createdAt: -1 });
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Get a single exam result by ID
-export const getResultById = async (req, res) => {
-  try {
-    const result = await ExamResult.findById(req.params.id).populate('answersSummary.questionId');
-    if (!result) {
-      return res.status(404).json({ message: 'Exam result not found' });
-    }
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Delete a single exam result
-export const deleteResult = async (req, res) => {
-  try {
-    const deleted = await ExamResult.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ message: 'Exam result not found' });
-    }
-    res.json({ message: 'Exam result deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Delete all exam results
-export const deleteAllResults = async (req, res) => {
-  try {
-    await ExamResult.deleteMany({});
-    res.json({ message: 'All exam results cleared successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const bidi = bidiFactory();
-
-// Helper function to handle Arabic / RTL text shaping for PDFKit
-function fixRTLText(text) {
-  if (!text) return '';
-  // Check if string contains Arabic characters
-  const containsArabic = /[\u0600-\u06FF]/.test(text);
-  if (!containsArabic) return text;
-
-  // Process RTL text layout
-  const bidiText = bidi.getReorderedString(text, 'rtl');
-  return bidiText;
-}
-
+// 2. Download Combined PDF for ALL Student Results
 export const getAllResultsPDF = async (req, res) => {
   try {
     const results = await ExamResult.find().sort({ createdAt: -1 });
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
 
-    // Path to your downloaded TTF font
-    const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
-
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="All_Exam_Results_${new Date().toISOString().split('T')[0]}.pdf"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="All_Exam_Results_${new Date().toISOString().split('T')[0]}.pdf"`
+    );
 
     doc.pipe(res);
+    applyFont(doc);
 
-    // Register Unicode/Arabic Font
-    doc.registerFont('ArabicFont', fontPath);
-    doc.font('ArabicFont');
-
-    // Header Title
+    // Title & Metadata
     doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
@@ -220,7 +134,7 @@ export const getAllResultsPDF = async (req, res) => {
     results.forEach((r, index) => {
       if (y > 750) {
         doc.addPage();
-        doc.font('ArabicFont');
+        applyFont(doc);
         y = 40;
         drawHeader(y);
         y += 22;
@@ -235,11 +149,10 @@ export const getAllResultsPDF = async (req, res) => {
       const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
       doc.rect(startX, y, 515, 20).fillAndStroke(bgColor, '#f1f5f9');
 
-      // Process and fix Arabic name formatting
-      const formattedName = fixRTLText(r.studentName || '—');
+      const displayName = formatRTL(r.studentName);
 
       doc.fillColor('#0f172a').fontSize(9);
-      doc.text(formattedName, startX + 10, y + 5, { width: 150, ellipsis: true });
+      doc.text(displayName, startX + 10, y + 5, { width: 150, ellipsis: true });
       doc.text(`${score} / 100`, startX + 170, y + 5, { width: 60, align: 'center' });
 
       const pctColor = pct >= 75 ? '#15803d' : pct >= 50 ? '#b45309' : '#dc2626';
@@ -259,6 +172,75 @@ export const getAllResultsPDF = async (req, res) => {
     });
 
     doc.end();
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 3. Save Student Result
+export const createResult = async (req, res) => {
+  try {
+    const { studentName, score, totalQuestions, correctAnswers, percentage, status, timeSpent, answersSummary } = req.body;
+
+    const newResult = new ExamResult({
+      studentName,
+      score,
+      totalQuestions,
+      correctAnswers,
+      percentage,
+      status,
+      timeSpent,
+      answersSummary,
+    });
+
+    const savedResult = await newResult.save();
+
+    res.status(201).json({
+      message: 'Exam submitted successfully',
+      resultId: savedResult._id,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// 4. Get All Results JSON
+export const getResults = async (req, res) => {
+  try {
+    const results = await ExamResult.find().sort({ createdAt: -1 });
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 5. Get Result By ID
+export const getResultById = async (req, res) => {
+  try {
+    const result = await ExamResult.findById(req.params.id).populate('answersSummary.questionId');
+    if (!result) return res.status(404).json({ message: 'Exam result not found' });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 6. Delete Single Result
+export const deleteResult = async (req, res) => {
+  try {
+    const deleted = await ExamResult.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Exam result not found' });
+    res.json({ message: 'Exam result deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 7. Delete All Results
+export const deleteAllResults = async (req, res) => {
+  try {
+    await ExamResult.deleteMany({});
+    res.json({ message: 'All exam results cleared successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
