@@ -57,7 +57,7 @@ export const getAllResultsPDF = async (req, res) => {
     }
 
     // Title
-    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
