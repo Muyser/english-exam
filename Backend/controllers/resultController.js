@@ -10,13 +10,119 @@ const __dirname = path.dirname(__filename);
 
 const bidi = bidiFactory();
 
-// Helper to reorder Arabic / RTL text so PDFKit renders it correctly
+// Helper to format Right-to-Left (Arabic) text correctly for PDFKit
 function formatRTL(text) {
   if (!text) return '—';
   const containsArabic = /[\u0600-\u06FF]/.test(text);
-  if (!containsArabic) return text;
-  return bidi.getReorderedString(text, 'rtl');
+  if (!containsArabic) return text; // Return English as-is
+  return bidi.getReorderedString(text, 'rtl'); // Shape and reverse Arabic text
 }
+
+export const getAllResultsPDF = async (req, res) => {
+  try {
+    const results = await ExamResult.find().sort({ createdAt: -1 });
+
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+    // Path to downloaded TTF font
+    const fontPath = path.join(__dirname, '../fonts/Cairo-Regular.ttf');
+
+    // Register font if it exists, otherwise fall back to Helvetica
+    const fontExists = fs.existsSync(fontPath);
+    if (fontExists) {
+      doc.registerFont('ArabicFont', fontPath);
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="All_Exam_Results_${new Date().toISOString().split('T')[0]}.pdf"`
+    );
+
+    doc.pipe(res);
+
+    // Set font
+    if (fontExists) doc.font('ArabicFont');
+    else doc.font('Helvetica-Bold');
+
+    // Header Title
+    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
+    doc.moveDown(0.5);
+
+    if (fontExists) doc.font('ArabicFont');
+    else doc.font('Helvetica');
+
+    doc.fillColor('#64748b').fontSize(9).text(`Total Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.moveDown(1);
+
+    const startX = 40;
+    let y = doc.y;
+
+    const drawHeader = (currentY) => {
+      doc.rect(startX, currentY, 515, 22).fill('#1e293b');
+      doc.fillColor('#ffffff').fontSize(9);
+      doc.text('Student Name', startX + 10, currentY + 6, { width: 150 });
+      doc.text('Score', startX + 170, currentY + 6, { width: 60, align: 'center' });
+      doc.text('Percentage', startX + 240, currentY + 6, { width: 65, align: 'center' });
+      doc.text('Correct', startX + 315, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Wrong', startX + 370, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Date', startX + 430, currentY + 6, { width: 75, align: 'center' });
+    };
+
+    drawHeader(y);
+    y += 22;
+
+    results.forEach((r, index) => {
+      if (y > 750) {
+        doc.addPage();
+        if (fontExists) doc.font('ArabicFont');
+        y = 40;
+        drawHeader(y);
+        y += 22;
+      }
+
+      const score = r.score !== undefined ? r.score : (r.correctAnswers || 0) * 2;
+      const totalQ = r.totalQuestions || 50;
+      const wrong = r.wrongAnswers !== undefined ? r.wrongAnswers : Math.max(0, totalQ - (r.correctAnswers || 0));
+      const pct = r.percentage || Math.round((score / 100) * 100);
+      const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A';
+
+      const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
+      doc.rect(startX, y, 515, 20).fillAndStroke(bgColor, '#f1f5f9');
+
+      // Process student name to fix Arabic text display
+      const displayName = formatRTL(r.studentName);
+
+      doc.fillColor('#0f172a').fontSize(9);
+      doc.text(displayName, startX + 10, y + 5, { width: 150, ellipsis: true });
+      doc.text(`${score} / 100`, startX + 170, y + 5, { width: 60, align: 'center' });
+
+      const pctColor = pct >= 75 ? '#15803d' : pct >= 50 ? '#b45309' : '#dc2626';
+      doc.fillColor(pctColor);
+      doc.text(`${pct}%`, startX + 240, y + 5, { width: 65, align: 'center' });
+
+      doc.fillColor('#16a34a');
+      doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 315, y + 5, { width: 50, align: 'center' });
+
+      doc.fillColor('#dc2626');
+      doc.text(`${wrong}/${totalQ}`, startX + 370, y + 5, { width: 50, align: 'center' });
+
+      doc.fillColor('#475569');
+      doc.text(dateStr, startX + 430, y + 5, { width: 75, align: 'center' });
+
+      y += 20;
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error in getAllResultsPDF:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+};
 
 // Helper to configure fonts safely
 function applyFont(doc) {
@@ -89,97 +195,6 @@ export const getResultPDF = async (req, res) => {
   }
 };
 
-
-export const getAllResultsPDF = async (req, res) => {
-  try {
-    const results = await ExamResult.find().sort({ createdAt: -1 });
-
-    const doc = new PDFDocument({ size: 'A4', margin: 40 });
-
-    // Set headers before piping
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="All_Exam_Results_${new Date().toISOString().split('T')[0]}.pdf"`
-    );
-
-    // Pipe PDF to response
-    doc.pipe(res);
-
-    // Header
-    doc.fillColor('#0f172a').fontSize(20).font('Helvetica-Bold').text('Nour Academy', { align: 'center' });
-    doc.moveDown(0.2);
-    doc.fillColor('#2563eb').fontSize(13).font('Helvetica-Bold').text('All Students Exam Results Summary', { align: 'center' });
-    doc.moveDown(0.5);
-
-    doc.fillColor('#64748b').fontSize(9).font('Helvetica').text(`Total Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
-    doc.moveDown(1);
-
-    const startX = 40;
-    let y = doc.y;
-
-    const drawHeader = (currentY) => {
-      doc.rect(startX, currentY, 515, 22).fill('#1e293b');
-      doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
-      doc.text('Student Name', startX + 10, currentY + 6, { width: 150 });
-      doc.text('Score', startX + 170, currentY + 6, { width: 60, align: 'center' });
-      doc.text('Percentage', startX + 240, currentY + 6, { width: 65, align: 'center' });
-      doc.text('Correct', startX + 315, currentY + 6, { width: 50, align: 'center' });
-      doc.text('Wrong', startX + 370, currentY + 6, { width: 50, align: 'center' });
-      doc.text('Date', startX + 430, currentY + 6, { width: 75, align: 'center' });
-    };
-
-    drawHeader(y);
-    y += 22;
-
-    results.forEach((r, index) => {
-      if (y > 750) {
-        doc.addPage();
-        y = 40;
-        drawHeader(y);
-        y += 22;
-      }
-
-      const score = r.score !== undefined ? r.score : (r.correctAnswers || 0) * 2;
-      const totalQ = r.totalQuestions || 50;
-      const wrong = r.wrongAnswers !== undefined ? r.wrongAnswers : Math.max(0, totalQ - (r.correctAnswers || 0));
-      const pct = r.percentage || Math.round((score / 100) * 100);
-      const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A';
-
-      const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
-      doc.rect(startX, y, 515, 20).fillAndStroke(bgColor, '#f1f5f9');
-
-      doc.fillColor('#0f172a').fontSize(9).font('Helvetica');
-      doc.text(r.studentName || '—', startX + 10, y + 5, { width: 150, ellipsis: true });
-      doc.text(`${score} / 100`, startX + 170, y + 5, { width: 60, align: 'center' });
-
-      const pctColor = pct >= 75 ? '#15803d' : pct >= 50 ? '#b45309' : '#dc2626';
-      doc.fillColor(pctColor).font('Helvetica-Bold');
-      doc.text(`${pct}%`, startX + 240, y + 5, { width: 65, align: 'center' });
-
-      doc.fillColor('#16a34a').font('Helvetica');
-      doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 315, y + 5, { width: 50, align: 'center' });
-
-      doc.fillColor('#dc2626');
-      doc.text(`${wrong}/${totalQ}`, startX + 370, y + 5, { width: 50, align: 'center' });
-
-      doc.fillColor('#475569');
-      doc.text(dateStr, startX + 430, y + 5, { width: 75, align: 'center' });
-
-      y += 20;
-    });
-
-    // Finalize PDF
-    doc.end();
-  } catch (error) {
-    console.error('PDF Generation Error:', error);
-
-    // Safeguard: only send JSON response if headers haven't been sent yet
-    if (!res.headersSent) {
-      res.status(500).json({ message: 'Failed to generate PDF: ' + error.message });
-    }
-  }
-};
 
 // 3. Save Student Result
 export const createResult = async (req, res) => {
