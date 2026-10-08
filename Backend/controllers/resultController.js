@@ -1,5 +1,6 @@
 import ExamResult from '../models/ExamResult.js';
 import PDFDocument from 'pdfkit';
+import fontkit from 'fontkit';
 import bidiFactory from 'bidi-js';
 import path from 'path';
 import fs from 'fs';
@@ -10,49 +11,56 @@ const __dirname = path.dirname(__filename);
 
 const bidi = bidiFactory();
 
-// Helper to format Right-to-Left (Arabic) text correctly for PDFKit
 function formatRTL(text) {
   if (!text) return '—';
   const containsArabic = /[\u0600-\u06FF]/.test(text);
-  if (!containsArabic) return text; // Return English as-is
-  return bidi.getReorderedString(text, 'rtl'); // Shape and reverse Arabic text
+  if (!containsArabic) return text;
+  return bidi.getReorderedString(text, 'rtl');
 }
 
 export const getAllResultsPDF = async (req, res) => {
+  let doc;
   try {
     const results = await ExamResult.find().sort({ createdAt: -1 });
 
-    const doc = new PDFDocument({ size: 'A4', margin: 40 });
-
-    // Path to downloaded TTF font
-    const fontPath = path.join(__dirname, '../fonts/Cairo-Regular.ttf');
-
-    // Register font if it exists, otherwise fall back to Helvetica
+    // 1. Resolve & check font file path before creating the stream
+    const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
     const fontExists = fs.existsSync(fontPath);
+
+    // 2. Initialize PDF Document
+    doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+    // 3. Register fontkit to handle complex TTF tables safely
+    doc.registerFontkit(fontkit);
+
     if (fontExists) {
       doc.registerFont('ArabicFont', fontPath);
     }
 
+    // Set HTTP response headers before piping
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="All_Exam_Results_${new Date().toISOString().split('T')[0]}.pdf"`
     );
 
+    // Pipe PDF output to Express response
     doc.pipe(res);
 
-    // Set font
-    if (fontExists) doc.font('ArabicFont');
-    else doc.font('Helvetica-Bold');
+    // Apply custom font or fallback
+    if (fontExists) {
+      doc.font('ArabicFont');
+    } else {
+      doc.font('Helvetica-Bold');
+    }
 
-    // Header Title
+    // Title & Metadata
     doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
 
-    if (fontExists) doc.font('ArabicFont');
-    else doc.font('Helvetica');
+    if (!fontExists) doc.font('Helvetica');
 
     doc.fillColor('#64748b').fontSize(9).text(`Total Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
     doc.moveDown(1);
@@ -92,7 +100,6 @@ export const getAllResultsPDF = async (req, res) => {
       const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
       doc.rect(startX, y, 515, 20).fillAndStroke(bgColor, '#f1f5f9');
 
-      // Process student name to fix Arabic text display
       const displayName = formatRTL(r.studentName);
 
       doc.fillColor('#0f172a').fontSize(9);
@@ -118,8 +125,12 @@ export const getAllResultsPDF = async (req, res) => {
     doc.end();
   } catch (error) {
     console.error('Error in getAllResultsPDF:', error);
+
+    // Prevent ERR_STREAM_WRITE_AFTER_END by checking headersSent
     if (!res.headersSent) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ message: 'Failed to generate PDF: ' + error.message });
+    } else {
+      res.end();
     }
   }
 };
