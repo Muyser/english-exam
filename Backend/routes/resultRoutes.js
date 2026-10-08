@@ -17,7 +17,11 @@ router.post('/', createResult);
 
 // Admin protected routes
 router.get('/', protect, getResults);
+
+// CRITICAL: Specific named routes MUST come BEFORE parameterized '/:id' routes!
 router.get('/export-pdf', protect, getAllResultsPDF);
+
+// Parameterized routes
 router.get('/:id', protect, getResultById);
 router.get('/:id/pdf', protect, getResultPDF);
 router.delete('/:id', protect, deleteResult);

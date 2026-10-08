@@ -89,7 +89,7 @@ export const getResultPDF = async (req, res) => {
   }
 };
 
-// 2. Download Combined PDF for ALL Student Results
+
 export const getAllResultsPDF = async (req, res) => {
   try {
     const results = await ExamResult.find().sort({ createdAt: -1 });
@@ -103,15 +103,14 @@ export const getAllResultsPDF = async (req, res) => {
     );
 
     doc.pipe(res);
-    applyFont(doc);
 
     // Title & Metadata
-    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).font('Helvetica-Bold').text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
-    doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
+    doc.fillColor('#2563eb').fontSize(13).font('Helvetica-Bold').text('All Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
 
-    doc.fillColor('#64748b').fontSize(9).text(`Total Students: ${results.length}  |  Generated on: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.fillColor('#64748b').fontSize(9).font('Helvetica').text(`Total Students: ${results.length}  |  Generated on: ${new Date().toLocaleDateString()}`, { align: 'center' });
     doc.moveDown(1);
 
     const startX = 40;
@@ -119,7 +118,7 @@ export const getAllResultsPDF = async (req, res) => {
 
     const drawHeader = (currentY) => {
       doc.rect(startX, currentY, 515, 22).fill('#1e293b');
-      doc.fillColor('#ffffff').fontSize(9);
+      doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold');
       doc.text('Student Name', startX + 10, currentY + 6, { width: 150 });
       doc.text('Score', startX + 170, currentY + 6, { width: 60, align: 'center' });
       doc.text('Percentage', startX + 240, currentY + 6, { width: 65, align: 'center' });
@@ -134,7 +133,6 @@ export const getAllResultsPDF = async (req, res) => {
     results.forEach((r, index) => {
       if (y > 750) {
         doc.addPage();
-        applyFont(doc);
         y = 40;
         drawHeader(y);
         y += 22;
@@ -151,15 +149,15 @@ export const getAllResultsPDF = async (req, res) => {
 
       const displayName = formatRTL(r.studentName);
 
-      doc.fillColor('#0f172a').fontSize(9);
+      doc.fillColor('#0f172a').fontSize(9).font('Helvetica');
       doc.text(displayName, startX + 10, y + 5, { width: 150, ellipsis: true });
       doc.text(`${score} / 100`, startX + 170, y + 5, { width: 60, align: 'center' });
 
       const pctColor = pct >= 75 ? '#15803d' : pct >= 50 ? '#b45309' : '#dc2626';
-      doc.fillColor(pctColor);
+      doc.fillColor(pctColor).font('Helvetica-Bold');
       doc.text(`${pct}%`, startX + 240, y + 5, { width: 65, align: 'center' });
 
-      doc.fillColor('#16a34a');
+      doc.fillColor('#16a34a').font('Helvetica');
       doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 315, y + 5, { width: 50, align: 'center' });
 
       doc.fillColor('#dc2626');
@@ -173,6 +171,7 @@ export const getAllResultsPDF = async (req, res) => {
 
     doc.end();
   } catch (error) {
+    console.error('Error in getAllResultsPDF:', error);
     res.status(500).json({ message: error.message });
   }
 };
