@@ -45,14 +45,13 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    // Compare password here using bcrypt directly
     if (user && (await bcrypt.compare(password, user.password))) {
       res.json({
         token: generateToken(user._id),
         user: {
           id: user._id,
           email: user.email,
-          role: user.role,
+          role: user.role || 'admin',
         },
       });
     } else {

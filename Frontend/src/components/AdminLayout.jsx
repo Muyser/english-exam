@@ -11,6 +11,9 @@ export default function AdminLayout() {
   const isRTL = lang === 'ar';
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
+  // Retrieve logged-in admin details saved in localStorage during login
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+
   const nav = [
     { to: '/admin/dashboard', label: t('alayout.overview'), icon: LayoutDashboard },
     { to: '/admin/questions', label: t('alayout.questions'), icon: ListChecks },
@@ -20,12 +23,16 @@ export default function AdminLayout() {
 
   const handleLogout = async () => {
     try { await base44.auth.logout(); } catch {}
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    localStorage.removeItem('token');
     navigate('/admin/login', { replace: true });
     window.location.reload();
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-64 flex-col fixed inset-y-0 start-0 border-e border-slate-200 bg-white">
         <div className="h-20 flex items-center gap-3 px-6 border-b border-slate-200">
           <img 
@@ -33,11 +40,18 @@ export default function AdminLayout() {
             alt="Logo" 
             className="h-12 w-auto object-contain rounded-lg shrink-0" 
           />
-          <div className="leading-tight">
-            <div className="text-sm font-semibold text-slate-900">{t('alayout.brand')}</div>
-            <div className="text-[11px] text-muted-foreground">{t('alayout.panel')}</div>
+          <div className="leading-tight truncate">
+            {/* Display logged-in admin email or app brand */}
+            <div className="text-sm font-semibold text-slate-900 truncate">
+              {adminUser.email || t('alayout.brand')}
+            </div>
+            {/* Display logged-in admin role or default panel title */}
+            <div className="text-[11px] text-muted-foreground capitalize truncate">
+              {adminUser.role || t('alayout.panel')}
+            </div>
           </div>
         </div>
+
         <nav className="flex-1 px-3 py-4 space-y-1">
           {nav.map((item) => (
             <NavLink
@@ -55,6 +69,7 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
+
         <div className="p-3 border-t border-slate-200">
           <div className="px-1 pb-2"><LangSwitch /></div>
           <Link to="/" className="flex items-center gap-1.5 px-3 py-2 text-xs text-muted-foreground hover:text-slate-900">
@@ -66,17 +81,28 @@ export default function AdminLayout() {
         </div>
       </aside>
 
+      {/* Mobile Header Bar */}
       <div className="md:hidden fixed top-0 inset-x-0 h-14 bg-white border-b border-slate-200 z-30 flex items-center px-4">
         <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center me-2">
           <GraduationCap className="w-4 h-4 text-white" />
         </div>
-        <span className="font-semibold text-slate-900 text-sm">{t('alayout.mobileBrand')}</span>
+        <div className="flex flex-col truncate me-2">
+          <span className="font-semibold text-slate-900 text-xs truncate">
+            {adminUser.email || t('alayout.mobileBrand')}
+          </span>
+          {adminUser.role && (
+            <span className="text-[10px] text-muted-foreground capitalize truncate">
+              {adminUser.role}
+            </span>
+          )}
+        </div>
         <div className="ms-auto flex items-center gap-2">
           <LangSwitch />
           <button onClick={handleLogout} className="p-2 text-slate-500"><LogOut className="w-5 h-5" /></button>
         </div>
       </div>
 
+      {/* Main Content Area */}
       <main className="flex-1 md:ms-64 pt-14 md:pt-0">
         <div className="md:hidden flex overflow-x-auto gap-1 px-3 py-2 bg-white border-b border-slate-200 sticky top-14 z-20">
           {nav.map((item) => (

@@ -27,7 +27,7 @@ const dict = {
     'home.instr5': 'تأكد من الإجابة على جميع الأسئلة قبل الإرسال.',
     'home.start': 'ابدأ الامتحان',
     'home.noAccount': 'لا تحتاج إلى حساب — أدخل اسمك ورقم هاتفك فقط.',
-    'home.footer': '© {year} أكاديمية نور برو — تقييم قواعد اللغة الإنجليزية',
+    'home.footer': '© {year} أكاديمية نور  — تقييم قواعد اللغة الإنجليزية',
 
     'student.title': 'معلومات الطالب',
     'student.desc': 'أدخل بياناتك لبدء الامتحان.',
@@ -63,7 +63,7 @@ const dict = {
 
     'alogin.backSite': 'العودة للموقع',
     'alogin.title': 'تسجيل دخول الإدارة',
-    'alogin.subtitle': 'أكاديمية نور برو — لوحة الإدارة',
+    'alogin.subtitle': 'أكاديمية نور  — لوحة الإدارة',
     'alogin.errNotAdmin': 'ليس لهذا الحساب صلاحية الإدارة.',
     'alogin.errInvalid': 'بريد إلكتروني أو كلمة مرور غير صحيحة',
     'alogin.email': 'البريد الإلكتروني',
@@ -72,7 +72,7 @@ const dict = {
     'alogin.signIn': 'تسجيل الدخول',
     'alogin.note': 'للموظفين المخوّلين فقط. امتحانات الطلاب لا تتطلب تسجيل دخول.',
 
-    'alayout.brand': 'نور برو',
+    'alayout.brand': 'أكاديمية نور',
     'alayout.panel': 'لوحة الإدارة',
     'alayout.overview': 'نظرة عامة',
     'alayout.questions': 'الأسئلة',
