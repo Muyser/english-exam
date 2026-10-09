@@ -34,8 +34,8 @@ export default function AdminLayout() {
             className="h-12 w-auto object-contain rounded-lg shrink-0" 
           />
           <div className="leading-tight">
-            <div className="text-sm font-semibold text-slate-900">{t('alayout.brand')}</div>
-            <div className="text-[11px] text-muted-foreground">{t('alayout.panel')}</div>
+            <div className="text-sm font-semibold text-slate-900">{isAr ? 'أكاديمية نور' : 'Noor Academy'}</div>
+            <div className="text-[11px] text-muted-foreground">{isAr ? 'لوحة التحكم' : 'Admin Panel'}</div>
           </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
