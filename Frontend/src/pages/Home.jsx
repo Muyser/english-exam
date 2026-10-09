@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -10,6 +11,19 @@ export default function Home() {
   const { t, lang } = useI18n();
   const isRTL = lang === 'ar';
   const StartIcon = isRTL ? ChevronLeft : ChevronRight;
+
+  // Check if token exists in localStorage
+  const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+
+  // Handle Admin Link Click: Navigate to Dashboard if logged in, else to Login
+  const handleAdminClick = (e) => {
+    e.preventDefault();
+    if (token) {
+      navigate('/admin/dashboard');
+    } else {
+      navigate('/admin/login');
+    }
+  };
 
   const stats = [
     { icon: ListChecks, label: t('home.statTotalQ'), value: '50' },
@@ -37,9 +51,14 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <LangSwitch />
-            <Link to="/admin/login" className="text-xs font-medium text-muted-foreground hover:text-slate-900 flex items-center gap-1.5">
+            {/* Smart Admin Button */}
+            <a 
+              href={token ? "/admin/dashboard" : "/admin/login"} 
+              onClick={handleAdminClick} 
+              className="text-xs font-medium text-muted-foreground hover:text-slate-900 flex items-center gap-1.5 cursor-pointer"
+            >
               <ShieldCheck className="w-3.5 h-3.5" /> {t('home.admin')}
-            </Link>
+            </a>
           </div>
         </div>
       </header>
