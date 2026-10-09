@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,17 +14,52 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  // Post-login destination (e.g. the MCP OAuth consent page sends users here
-  // with returnTo so the grant flow can resume). Same-origin paths only.
+  const navigate = useNavigate();
+
+  // Post-login destination
   const returnTo = safeReturnTo();
+
+  const API_URL = import.meta.env.VITE_API_URL || 'https://english-grammer-exam.onrender.com';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = returnTo;
+      // 1. Direct call to your Node.js/Express backend auth endpoint
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Invalid email or password");
+      }
+
+      // 2. Persist token and user profile into localStorage for persistence
+      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminUser", JSON.stringify(data.user));
+
+      // Also support legacy token key if used elsewhere
+      localStorage.setItem("token", data.token);
+
+      // 3. Fallback/Sync with base44 auth SDK if applicable
+      try {
+        await base44.auth.loginViaEmailPassword(email, password);
+      } catch (sdkErr) {
+        // SDK fallback warning ignored if custom backend succeeded
+      }
+
+      // 4. Navigate to returnTo target or admin dashboard
+      if (returnTo && returnTo !== "/") {
+        window.location.href = returnTo;
+      } else {
+        navigate("/admin/dashboard", { replace: true });
+      }
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {
