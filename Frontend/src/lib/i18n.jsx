@@ -2,8 +2,8 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 
 const dict = {
   ar: {
-    'common.brand': 'NOOR PRO ACADEMY',
-    'common.academy': 'أكاديمية نور برو',
+    'common.brand': 'NOOR ACADEMY',
+    'common.academy': 'أكاديمية برو',
     'common.examSubtitle': 'الامتحان النهائي للقواعد',
     'common.backHome': 'العودة للرئيسية',
     'common.back': 'رجوع',
