@@ -23,6 +23,8 @@ export default function AdminResults() {
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState(null);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [downloadingPassed, setDownloadingPassed] = useState(false);
+  const [downloadingFailed, setDownloadingFailed] = useState(false);
   const [search, setSearch] = useState('');
   const [scoreFilter, setScoreFilter] = useState('all');
   const [sort, setSort] = useState('latest');
@@ -106,7 +108,7 @@ export default function AdminResults() {
     }
   };
 
-  // Download combined PDF report of all student results from Backend
+  // Download combined PDF report of all student results
   const handleDownloadAllPDF = async () => {
     setDownloadingAll(true);
     try {
@@ -134,6 +136,68 @@ export default function AdminResults() {
       });
     } finally {
       setDownloadingAll(false);
+    }
+  };
+
+  // Download Passed Students PDF Report
+  const handleDownloadPassedPDF = async () => {
+    setDownloadingPassed(true);
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/results/export-passed-pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error('Failed to generate passed students PDF');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Passed_Students_Results_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      toast({
+        title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF',
+        description: e.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingPassed(false);
+    }
+  };
+
+  // Download Failed Students PDF Report
+  const handleDownloadFailedPDF = async () => {
+    setDownloadingFailed(true);
+    try {
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/results/export-failed-pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error('Failed to generate failed students PDF');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Failed_Students_Results_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      toast({
+        title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF',
+        description: e.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloadingFailed(false);
     }
   };
 
@@ -188,25 +252,45 @@ export default function AdminResults() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header and Export Action */}
+      {/* Header and Export Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{isAr ? 'نتائج الامتحانات' : 'Exam Results'}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{isAr ? 'عرض وإدارة نتائج امتحانات الطلاب' : 'View and manage student exam scores'}</p>
         </div>
 
-        <button
-          onClick={handleDownloadAllPDF}
-          disabled={downloadingAll || results.length === 0}
-          className="h-10 px-4 bg-red-600 hover:bg-red-700 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0"
-        >
-          {downloadingAll ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          <span>{isAr ? 'تحميل جميع النتائج PDF' : 'Export All PDF'}</span>
-        </button>
+        {/* PDF Export Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Export All */}
+          <button
+            onClick={handleDownloadAllPDF}
+            disabled={downloadingAll || results.length === 0}
+            className="h-10 px-3 bg-red-600 hover:bg-red-700 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0"
+          >
+            {downloadingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span>{isAr ? 'تحميل الكل PDF' : 'Export All PDF'}</span>
+          </button>
+
+          {/* Export Passed Only */}
+          <button
+            onClick={handleDownloadPassedPDF}
+            disabled={downloadingPassed || results.length === 0}
+            className="h-10 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0"
+          >
+            {downloadingPassed ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span>{isAr ? 'الناجحين فقط PDF' : 'Export Passed PDF'}</span>
+          </button>
+
+          {/* Export Failed Only */}
+          <button
+            onClick={handleDownloadFailedPDF}
+            disabled={downloadingFailed || results.length === 0}
+            className="h-10 px-3 bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0"
+          >
+            {downloadingFailed ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span>{isAr ? 'الراسبين فقط PDF' : 'Export Failed PDF'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}

@@ -3,6 +3,8 @@ import {
   createResult,
   getResultPDF,
   getAllResultsPDF,
+  getPassedResultsPDF, // <--- New
+  getFailedResultsPDF, // <--- New
   getResults,
   getResultById,
   deleteResult,
@@ -12,16 +14,15 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Public route for students
 router.post('/', createResult);
-
-// Admin protected routes
 router.get('/', protect, getResults);
 
-// CRITICAL: Specific named routes MUST come BEFORE parameterized '/:id' routes!
+// Dedicated PDF Export Routes
 router.get('/export-pdf', protect, getAllResultsPDF);
+router.get('/export-passed-pdf', protect, getPassedResultsPDF);
+router.get('/export-failed-pdf', protect, getFailedResultsPDF);
 
-// Parameterized routes
+// Parameterized Routes
 router.get('/:id', protect, getResultById);
 router.get('/:id/pdf', protect, getResultPDF);
 router.delete('/:id', protect, deleteResult);

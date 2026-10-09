@@ -215,6 +215,224 @@ export const getResultPDF = async (req, res) => {
   }
 };
 
+// Export Passed Students Only (Percentage >= 50%)
+export const getPassedResultsPDF = async (req, res) => {
+  try {
+    const results = await ExamResult.find({
+      $or: [{ percentage: {$gte: 50 } }, { status: 'passed' }],
+    }).sort({ createdAt: -1 });
+
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+    const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
+    const hasFont = fs.existsSync(fontPath);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Passed_Students_Results_${new Date().toISOString().split('T')[0]}.pdf"`
+    );
+
+    doc.pipe(res);
+
+    if (hasFont) {
+      try { doc.font(fontPath); } catch (e) { doc.font('Helvetica-Bold'); }
+    } else {
+      doc.font('Helvetica-Bold');
+    }
+
+    // Header Title
+    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fillColor('#16a34a').fontSize(13).text('Passed Students Exam Results Summary', { align: 'center' });
+    doc.moveDown(0.5);
+
+    if (!hasFont) doc.font('Helvetica');
+    doc.fillColor('#64748b').fontSize(9).text(`Total Passed Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.moveDown(1);
+
+    const startX = 40;
+    let y = doc.y;
+
+    const drawHeader = (currentY) => {
+      doc.rect(startX, currentY, 515, 22).fill('#1e293b');
+      doc.fillColor('#ffffff').fontSize(9);
+      doc.text('#', startX + 8, currentY + 6, { width: 25, align: 'center' });
+      doc.text('Student Name', startX + 35, currentY + 6, { width: 145 });
+      doc.text('Score', startX + 180, currentY + 6, { width: 55, align: 'center' });
+      doc.text('Percentage', startX + 240, currentY + 6, { width: 65, align: 'center' });
+      doc.text('Correct', startX + 310, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Wrong', startX + 365, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Date', startX + 425, currentY + 6, { width: 80, align: 'center' });
+    };
+
+    drawHeader(y);
+    y += 22;
+
+    results.forEach((r, index) => {
+      if (y > 750) {
+        doc.addPage();
+        if (hasFont) {
+          try { doc.font(fontPath); } catch (e) { doc.font('Helvetica'); }
+        }
+        y = 40;
+        drawHeader(y);
+        y += 22;
+      }
+
+      const score = r.score !== undefined ? r.score : (r.correctAnswers || 0) * 2;
+      const totalQ = r.totalQuestions || 50;
+      const wrong = r.wrongAnswers !== undefined ? r.wrongAnswers : Math.max(0, totalQ - (r.correctAnswers || 0));
+      const pct = r.percentage || Math.round((score / 100) * 100);
+      const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A';
+
+      const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
+      doc.rect(startX, y, 515, 20).fillAndStroke(bgColor, '#f1f5f9');
+
+      const displayName = formatRTL(r.studentName);
+
+      doc.fillColor('#64748b').fontSize(9);
+      doc.text(`${index + 1}`, startX + 8, y + 5, { width: 25, align: 'center' });
+
+      doc.fillColor('#0f172a');
+      doc.text(displayName, startX + 35, y + 5, { width: 145, ellipsis: true });
+
+      doc.text(`${score} / 100`, startX + 180, y + 5, { width: 55, align: 'center' });
+
+      doc.fillColor('#15803d');
+      doc.text(`${pct}%`, startX + 240, y + 5, { width: 65, align: 'center' });
+
+      doc.fillColor('#16a34a');
+      doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 310, y + 5, { width: 50, align: 'center' });
+
+      doc.fillColor('#dc2626');
+      doc.text(`${wrong}/${totalQ}`, startX + 365, y + 5, { width: 50, align: 'center' });
+
+      doc.fillColor('#475569');
+      doc.text(dateStr, startX + 425, y + 5, { width: 80, align: 'center' });
+
+      y += 20;
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error in getPassedResultsPDF:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+};
+
+// Export Failed Students Only (Percentage < 50%)
+export const getFailedResultsPDF = async (req, res) => {
+  try {
+    const results = await ExamResult.find({
+      $and: [
+        { percentage: { $lt: 50 } },         { status: {$ne: 'passed' } }
+      ]
+    }).sort({ createdAt: -1 });
+
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+    const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
+    const hasFont = fs.existsSync(fontPath);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Failed_Students_Results_${new Date().toISOString().split('T')[0]}.pdf"`
+    );
+
+    doc.pipe(res);
+
+    if (hasFont) {
+      try { doc.font(fontPath); } catch (e) { doc.font('Helvetica-Bold'); }
+    } else {
+      doc.font('Helvetica-Bold');
+    }
+
+    // Header Title
+    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fillColor('#dc2626').fontSize(13).text('Failed Students Exam Results Summary', { align: 'center' });
+    doc.moveDown(0.5);
+
+    if (!hasFont) doc.font('Helvetica');
+    doc.fillColor('#64748b').fontSize(9).text(`Total Failed Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.moveDown(1);
+
+    const startX = 40;
+    let y = doc.y;
+
+    const drawHeader = (currentY) => {
+      doc.rect(startX, currentY, 515, 22).fill('#1e293b');
+      doc.fillColor('#ffffff').fontSize(9);
+      doc.text('#', startX + 8, currentY + 6, { width: 25, align: 'center' });
+      doc.text('Student Name', startX + 35, currentY + 6, { width: 145 });
+      doc.text('Score', startX + 180, currentY + 6, { width: 55, align: 'center' });
+      doc.text('Percentage', startX + 240, currentY + 6, { width: 65, align: 'center' });
+      doc.text('Correct', startX + 310, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Wrong', startX + 365, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Date', startX + 425, currentY + 6, { width: 80, align: 'center' });
+    };
+
+    drawHeader(y);
+    y += 22;
+
+    results.forEach((r, index) => {
+      if (y > 750) {
+        doc.addPage();
+        if (hasFont) {
+          try { doc.font(fontPath); } catch (e) { doc.font('Helvetica'); }
+        }
+        y = 40;
+        drawHeader(y);
+        y += 22;
+      }
+
+      const score = r.score !== undefined ? r.score : (r.correctAnswers || 0) * 2;
+      const totalQ = r.totalQuestions || 50;
+      const wrong = r.wrongAnswers !== undefined ? r.wrongAnswers : Math.max(0, totalQ - (r.correctAnswers || 0));
+      const pct = r.percentage || Math.round((score / 100) * 100);
+      const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A';
+
+      const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
+      doc.rect(startX, y, 515, 20).fillAndStroke(bgColor, '#f1f5f9');
+
+      const displayName = formatRTL(r.studentName);
+
+      doc.fillColor('#64748b').fontSize(9);
+      doc.text(`${index + 1}`, startX + 8, y + 5, { width: 25, align: 'center' });
+
+      doc.fillColor('#0f172a');
+      doc.text(displayName, startX + 35, y + 5, { width: 145, ellipsis: true });
+
+      doc.text(`${score} / 100`, startX + 180, y + 5, { width: 55, align: 'center' });
+
+      doc.fillColor('#dc2626');
+      doc.text(`${pct}%`, startX + 240, y + 5, { width: 65, align: 'center' });
+
+      doc.fillColor('#16a34a');
+      doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 310, y + 5, { width: 50, align: 'center' });
+
+      doc.fillColor('#dc2626');
+      doc.text(`${wrong}/${totalQ}`, startX + 365, y + 5, { width: 50, align: 'center' });
+
+      doc.fillColor('#475569');
+      doc.text(dateStr, startX + 425, y + 5, { width: 80, align: 'center' });
+
+      y += 20;
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error in getFailedResultsPDF:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+};
+
 
 // 3. Save Student Result
 export const createResult = async (req, res) => {
