@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Loader2, ListChecks, ClipboardList, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, ListChecks, ClipboardList, TrendingUp, ArrowUp, ArrowDown, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 
@@ -26,7 +26,8 @@ function StatCard({ icon: Icon, label, value, tone }) {
 }
 
 export default function AdminDashboard() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const isAr = lang === 'ar';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,6 +71,10 @@ export default function AdminDashboard() {
 
   if (!data) return <p className="text-muted-foreground">{t('dash.loadFail')}</p>;
 
+  // Safely check passed / failed values from statsData or fallback calculations
+  const passedStudents = data.passedCount !== undefined ? data.passedCount : (data.passed || 0);
+  const failedStudents = data.failedCount !== undefined ? data.failedCount : (data.failed || 0);
+
   return (
     <div>
       <div className="mb-6">
@@ -77,13 +82,15 @@ export default function AdminDashboard() {
         <p className="text-sm text-muted-foreground mt-1">{t('dash.desc')}</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard icon={ListChecks} label={t('dash.totalQ')} value={data.totalQuestions} tone="slate" />
-        <StatCard icon={ListChecks} label={t('dash.activeQ')} value={data.activeQuestions} tone="emerald" />
-        <StatCard icon={ClipboardList} label={t('dash.totalResults')} value={data.totalResults} tone="blue" />
-        <StatCard icon={TrendingUp} label={t('dash.avg')} value={`${data.avg}%`} tone="amber" />
-        <StatCard icon={ArrowUp} label={t('dash.high')} value={`${data.high}%`} tone="emerald" />
-        <StatCard icon={ArrowDown} label={t('dash.low')} value={`${data.low}%`} tone="red" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={ListChecks} label={t('dash.totalQ')} value={data.totalQuestions || 0} tone="slate" />
+        <StatCard icon={ListChecks} label={t('dash.activeQ')} value={data.activeQuestions || 0} tone="emerald" />
+        <StatCard icon={ClipboardList} label={t('dash.totalResults')} value={data.totalResults || 0} tone="blue" />
+        <StatCard icon={TrendingUp} label={t('dash.avg')} value={`${data.avg || 0}%`} tone="amber" />
+        <StatCard icon={CheckCircle2} label={isAr ? 'الناجحين' : 'Passed Students'} value={passedStudents} tone="emerald" />
+        <StatCard icon={XCircle} label={isAr ? 'الراسبين' : 'Failed Students'} value={failedStudents} tone="red" />
+        <StatCard icon={ArrowUp} label={t('dash.high')} value={`${data.high || 0}%`} tone="emerald" />
+        <StatCard icon={ArrowDown} label={t('dash.low')} value={`${data.low || 0}%`} tone="red" />
       </div>
     </div>
   );

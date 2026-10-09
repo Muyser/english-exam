@@ -5,35 +5,48 @@ import ExamSetting from '../models/ExamSetting.js';
 // Get dashboard statistics
 export const getDashboardStats = async (req, res) => {
   try {
-    const [questions, results, setting] = await Promise.all([
-      Question.find(),
-      ExamResult.find(),
-      ExamSetting.findOne(),
-    ]);
+    const totalQuestions = await Question.countDocuments();
+    const activeQuestions = await Question.countDocuments({ active: true });
 
-    const totalQuestions = questions.length;
-    const activeQuestions = questions.filter((q) => q.status === 'active').length;
-    const required = setting?.numberOfQuestions || 50;
+    const results = await ExamResult.find();
     const totalResults = results.length;
 
-    const scores = results.map((r) => r.percentage || 0);
-    const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-    const high = scores.length ? Math.max(...scores) : 0;
-    const low = scores.length ? Math.min(...scores) : 0;
+    let avg = 0;
+    let high = 0;
+    let low = 0;
+    let passedCount = 0;
+    let failedCount = 0;
 
-    // Filter results created today
-    const today = new Date().toDateString();
-    const todayCount = results.filter((r) => new Date(r.createdAt || r.created_date).toDateString() === today).length;
+    if (totalResults > 0) {
+      const percentages = results.map(r => {
+        if (r.percentage !== undefined) return r.percentage;
+        const score = r.score !== undefined ? r.score : (r.correctAnswers || 0) * 2;
+        return Math.round((score / 100) * 100);
+      });
+
+      const sum = percentages.reduce((acc, curr) => acc + curr, 0);
+      avg = Math.round(sum / totalResults);
+      high = Math.max(...percentages);
+      low = Math.min(...percentages);
+
+      // Count passed vs failed (pass mark >= 50%)
+      passedCount = results.filter(r => {
+        const pct = r.percentage !== undefined ? r.percentage : (r.score || 0);
+        return pct >= 50 || r.status === 'passed';
+      }).length;
+
+      failedCount = totalResults - passedCount;
+    }
 
     res.json({
       totalQuestions,
       activeQuestions,
-      required,
       totalResults,
       avg,
       high,
       low,
-      todayCount,
+      passedCount,
+      failedCount,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
