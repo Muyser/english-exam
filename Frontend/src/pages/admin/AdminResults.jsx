@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -12,7 +13,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Search, ClipboardList, Eye, Trash2, AlertTriangle, FileText, Download } from 'lucide-react';
+import { Loader2, Search, ClipboardList, Eye, Trash2, Edit3, AlertTriangle, FileText, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 
@@ -30,9 +31,18 @@ export default function AdminResults() {
   const [sort, setSort] = useState('latest');
   const [viewTarget, setViewTarget] = useState(null);
 
-  // Delete modal state
+  // Edit / Update modal state
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState({ studentName: '', score: 0, correctAnswers: 0, totalQuestions: 50 });
+  const [updating, setUpdating] = useState(false);
+
+  // Single Delete modal state
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Delete All modal state
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL || 'https://english-grammer-exam.onrender.com';
 
@@ -89,6 +99,61 @@ export default function AdminResults() {
     loadResults();
   }, []);
 
+  // Open Edit Dialog
+  const handleOpenEdit = (result) => {
+    setEditTarget(result);
+    setEditForm({
+      studentName: result.studentName || '',
+      score: result.score || 0,
+      correctAnswers: result.correctAnswers || 0,
+      totalQuestions: result.totalQuestions || 50,
+    });
+  };
+
+  // Submit Update
+  const handleUpdateConfirm = async (e) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    setUpdating(true);
+    try {
+      const correct = Number(editForm.correctAnswers);
+      const totalQ = Number(editForm.totalQuestions);
+      const calculatedScore = Number(editForm.score);
+      const wrong = Math.max(0, totalQ - correct);
+      const pct = Math.round((calculatedScore / 100) * 100);
+
+      const payload = {
+        studentName: editForm.studentName,
+        score: calculatedScore,
+        correctAnswers: correct,
+        totalQuestions: totalQ,
+        wrongAnswers: wrong,
+        percentage: pct,
+      };
+
+      await authFetch(`/api/results/${editTarget.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+
+      setResults((prev) =>
+        prev.map((r) => (r.id === editTarget.id ? { ...r, ...payload, id: r.id } : r))
+      );
+
+      toast({ title: isAr ? 'تم تحديث النتيجة بنجاح' : 'Result updated successfully' });
+      setEditTarget(null);
+    } catch (e) {
+      toast({
+        title: isAr ? 'فشل تحديث النتيجة' : 'Failed to update result',
+        description: e.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Delete Single Result
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -108,7 +173,26 @@ export default function AdminResults() {
     }
   };
 
-  // Download combined PDF report of all student results
+  // Delete All Results Handler
+  const handleDeleteAllConfirm = async () => {
+    setDeletingAll(true);
+    try {
+      await authFetch('/api/results', { method: 'DELETE' });
+      setResults([]);
+      toast({ title: isAr ? 'تم مسح جميع نتائج الامتحانات بنجاح' : 'All exam results cleared successfully' });
+      setDeleteAllConfirm(false);
+    } catch (e) {
+      toast({
+        title: isAr ? 'فشل حذف جميع النتائج' : 'Failed to delete all results',
+        description: e.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
+  // PDF Export Handlers
   const handleDownloadAllPDF = async () => {
     setDownloadingAll(true);
     try {
@@ -129,17 +213,12 @@ export default function AdminResults() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      toast({
-        title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF',
-        description: e.message,
-        variant: 'destructive',
-      });
+      toast({ title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF', description: e.message, variant: 'destructive' });
     } finally {
       setDownloadingAll(false);
     }
   };
 
-  // Download Passed Students PDF Report
   const handleDownloadPassedPDF = async () => {
     setDownloadingPassed(true);
     try {
@@ -160,17 +239,12 @@ export default function AdminResults() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      toast({
-        title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF',
-        description: e.message,
-        variant: 'destructive',
-      });
+      toast({ title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF', description: e.message, variant: 'destructive' });
     } finally {
       setDownloadingPassed(false);
     }
   };
 
-  // Download Failed Students PDF Report
   const handleDownloadFailedPDF = async () => {
     setDownloadingFailed(true);
     try {
@@ -191,17 +265,12 @@ export default function AdminResults() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      toast({
-        title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF',
-        description: e.message,
-        variant: 'destructive',
-      });
+      toast({ title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF', description: e.message, variant: 'destructive' });
     } finally {
       setDownloadingFailed(false);
     }
   };
 
-  // Download single student PDF report from Backend
   const handleDownloadPDF = async (result) => {
     setDownloadingId(result.id);
     try {
@@ -222,11 +291,7 @@ export default function AdminResults() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      toast({
-        title: isAr ? 'فشل تحميل ملف PDF' : 'Failed to download PDF',
-        description: e.message,
-        variant: 'destructive',
-      });
+      toast({ title: isAr ? 'فشل تحميل ملف PDF' : 'Failed to download PDF', description: e.message, variant: 'destructive' });
     } finally {
       setDownloadingId(null);
     }
@@ -236,9 +301,7 @@ export default function AdminResults() {
     let list = results.slice();
     if (search) {
       const s = search.toLowerCase();
-      list = list.filter((r) =>
-        (r.studentName || '').toLowerCase().includes(s)
-      );
+      list = list.filter((r) => (r.studentName || '').toLowerCase().includes(s));
     }
     if (scoreFilter === 'high') list = list.filter((r) => (r.percentage || 0) >= 75);
     else if (scoreFilter === 'mid') list = list.filter((r) => (r.percentage || 0) >= 50 && (r.percentage || 0) < 75);
@@ -252,16 +315,15 @@ export default function AdminResults() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header and Export Actions */}
+      {/* Header and Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{isAr ? 'نتائج الامتحانات' : 'Exam Results'}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{isAr ? 'عرض وإدارة نتائج امتحانات الطلاب' : 'View and manage student exam scores'}</p>
         </div>
 
-        {/* PDF Export Buttons */}
+        {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Export All */}
           <button
             onClick={handleDownloadAllPDF}
             disabled={downloadingAll || results.length === 0}
@@ -271,7 +333,6 @@ export default function AdminResults() {
             <span>{isAr ? 'تحميل الكل PDF' : 'Export All PDF'}</span>
           </button>
 
-          {/* Export Passed Only */}
           <button
             onClick={handleDownloadPassedPDF}
             disabled={downloadingPassed || results.length === 0}
@@ -281,7 +342,6 @@ export default function AdminResults() {
             <span>{isAr ? 'الناجحين فقط PDF' : 'Export Passed PDF'}</span>
           </button>
 
-          {/* Export Failed Only */}
           <button
             onClick={handleDownloadFailedPDF}
             disabled={downloadingFailed || results.length === 0}
@@ -290,10 +350,20 @@ export default function AdminResults() {
             {downloadingFailed ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span>{isAr ? 'الراسبين فقط PDF' : 'Export Failed PDF'}</span>
           </button>
+
+          {/* Delete All Results Button */}
+          <button
+            onClick={() => setDeleteAllConfirm(true)}
+            disabled={results.length === 0}
+            className="h-10 px-3 bg-red-700 hover:bg-red-800 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>{isAr ? 'حذف جميع النتائج' : 'Delete All Results'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Filter Bar */}
+      {/* Search & Filters */}
       <Card className="p-3 sm:p-4 border-slate-200 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="relative">
@@ -323,7 +393,7 @@ export default function AdminResults() {
         )}
       </Card>
 
-      {/* Results Table & Cards */}
+      {/* Results Table & Mobile Cards */}
       <Card className="border-slate-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-slate-700" /></div>
@@ -334,7 +404,7 @@ export default function AdminResults() {
           </div>
         ) : (
           <>
-            {/* Desktop Table */}
+            {/* Desktop Table with Sequential Numbers */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-xs text-muted-foreground border-b border-slate-200">
@@ -380,6 +450,9 @@ export default function AdminResults() {
                             <button onClick={() => setViewTarget(r)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
                               <Eye className="w-4 h-4" />
                             </button>
+                            <button onClick={() => handleOpenEdit(r)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors">
+                              <Edit3 className="w-4 h-4" />
+                            </button>
                             <button onClick={() => setDeleteTarget(r)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -392,7 +465,7 @@ export default function AdminResults() {
               </table>
             </div>
 
-            {/* Mobile View */}
+            {/* Mobile View with Sequential Numbers */}
             <div className="sm:hidden divide-y divide-slate-100">
               {filtered.map((r, index) => {
                 const pct = r.percentage || 0;
@@ -438,6 +511,9 @@ export default function AdminResults() {
                         <button onClick={() => setViewTarget(r)} className="p-1 rounded-md hover:bg-slate-100 text-slate-500">
                           <Eye className="w-4 h-4" />
                         </button>
+                        <button onClick={() => handleOpenEdit(r)} className="p-1 rounded-md hover:bg-amber-50 text-amber-600">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
                         <button onClick={() => setDeleteTarget(r)} className="p-1 rounded-md hover:bg-red-50 text-red-600">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -454,6 +530,74 @@ export default function AdminResults() {
       {!loading && filtered.length > 0 && (
         <p className="text-xs text-muted-foreground mt-3">{`عرض ${filtered.length} من أصل ${results.length} نتيجة`}</p>
       )}
+
+      {/* Edit / Update Result Dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <DialogContent className="max-w-md w-[92vw] sm:w-full rounded-2xl">
+          <DialogHeader><DialogTitle>{isAr ? 'تحديث نتيجة الطالب' : 'Update Student Result'}</DialogTitle></DialogHeader>
+          {editTarget && (
+            <form onSubmit={handleUpdateConfirm} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label>{isAr ? 'اسم الطالب' : 'Student Name'}</Label>
+                <Input
+                  value={editForm.studentName}
+                  onChange={(e) => setEditForm({ ...editForm, studentName: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>{isAr ? 'الدرجة (من 100)' : 'Score (out of 100)'}</Label>
+                  <Input
+                    type="number"
+                    value={editForm.score}
+                    onChange={(e) => setEditForm({ ...editForm, score: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{isAr ? 'الأسئلة الصحيحة' : 'Correct Answers'}</Label>
+                  <Input
+                    type="number"
+                    value={editForm.correctAnswers}
+                    onChange={(e) => setEditForm({ ...editForm, correctAnswers: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>{isAr ? 'إجمالي الأسئلة' : 'Total Questions'}</Label>
+                <Input
+                  type="number"
+                  value={editForm.totalQuestions}
+                  onChange={(e) => setEditForm({ ...editForm, totalQuestions: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditTarget(null)}
+                  className="px-4 h-10 border rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-50"
+                >
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="px-4 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                >
+                  {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {isAr ? 'حفظ التغييرات' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* View Details Dialog */}
       <Dialog open={!!viewTarget} onOpenChange={(o) => !o && setViewTarget(null)}>
@@ -484,11 +628,7 @@ export default function AdminResults() {
                 disabled={downloadingId === viewTarget.id}
                 className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
-                {downloadingId === viewTarget.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
+                {downloadingId === viewTarget.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                 {isAr ? 'تنزيل تقرير PDF' : 'Download PDF Report'}
               </button>
             </div>
@@ -496,7 +636,7 @@ export default function AdminResults() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Popup */}
+      {/* Delete Single Result Confirmation Popup */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent className="max-w-md w-[92vw] sm:w-full rounded-2xl p-4 sm:p-6">
           <AlertDialogHeader className="text-start">
@@ -504,13 +644,9 @@ export default function AdminResults() {
               <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
-              <div>
-                <AlertDialogTitle className="text-base font-semibold text-slate-900">
-                  {isAr 
-                    ? `حذف نتيجة ${deleteTarget?.studentName || ''}`
-                    : `Delete result for ${deleteTarget?.studentName || 'student'}`}
-                </AlertDialogTitle>
-              </div>
+              <AlertDialogTitle className="text-base font-semibold text-slate-900">
+                {isAr ? `حذف نتيجة ${deleteTarget?.studentName || ''}` : `Delete result for ${deleteTarget?.studentName || 'student'}`}
+              </AlertDialogTitle>
             </div>
             <AlertDialogDescription className="text-xs sm:text-sm text-slate-600 pt-1">
               {isAr
@@ -527,12 +663,42 @@ export default function AdminResults() {
               disabled={deleting}
               className="h-9 text-xs sm:text-sm px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white font-medium flex items-center gap-2"
             >
-              {deleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {isAr ? 'حذف' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete All Results Confirmation Popup */}
+      <AlertDialog open={deleteAllConfirm} onOpenChange={setDeleteAllConfirm}>
+        <AlertDialogContent className="max-w-md w-[92vw] sm:w-full rounded-2xl p-4 sm:p-6">
+          <AlertDialogHeader className="text-start">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <AlertDialogTitle className="text-base font-semibold text-slate-900">
+                {isAr ? 'حذف جميع النتائج' : 'Delete All Results'}
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-xs sm:text-sm text-slate-600 pt-1">
+              {isAr
+                ? 'هل أنت تأكيد تماماً من رغبتك في حذف جميع نتائج الطلاب المسجلة؟ سيؤدي هذا الإجراء إلى مسح كافة سجلات الامتحانات بشكل نهائي.'
+                : 'Are you sure you want to delete ALL student exam results? This action will permanently remove all stored exam records and cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex flex-row gap-2 justify-end">
+            <AlertDialogCancel disabled={deletingAll} className="h-9 text-xs sm:text-sm px-3 sm:px-4">
+              {isAr ? 'إلغاء' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeleteAllConfirm(); }}
+              disabled={deletingAll}
+              className="h-9 text-xs sm:text-sm px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white font-medium flex items-center gap-2"
+            >
+              {deletingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {isAr ? 'نعم، احذف الجميع' : 'Yes, Delete All'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
