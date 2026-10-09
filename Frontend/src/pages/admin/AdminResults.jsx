@@ -255,6 +255,7 @@ export default function AdminResults() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-xs text-muted-foreground border-b border-slate-200">
                   <tr>
+                    <th className="text-center font-medium px-3 py-3 w-12">#</th>
                     <th className="text-start font-medium px-4 py-3">{isAr ? 'الطالب' : 'Student'}</th>
                     <th className="text-center font-medium px-4 py-3">{isAr ? 'الدرجة' : 'Score'}</th>
                     <th className="text-center font-medium px-4 py-3">%</th>
@@ -265,11 +266,12 @@ export default function AdminResults() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((r) => {
+                  {filtered.map((r, index) => {
                     const pct = r.percentage || 0;
                     const isPdfLoading = downloadingId === r.id;
                     return (
                       <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-3 py-3 text-center text-slate-500 font-medium tabular-nums">{index + 1}</td>
                         <td className="px-4 py-3 font-medium text-slate-900">{r.studentName}</td>
                         <td className="px-4 py-3 text-center text-slate-900 font-medium tabular-nums">{r.score}/100</td>
                         <td className="px-4 py-3 text-center">
@@ -308,13 +310,16 @@ export default function AdminResults() {
 
             {/* Mobile View */}
             <div className="sm:hidden divide-y divide-slate-100">
-              {filtered.map((r) => {
+              {filtered.map((r, index) => {
                 const pct = r.percentage || 0;
                 const isPdfLoading = downloadingId === r.id;
                 return (
                   <div key={r.id} className="p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-900 text-sm">{r.studentName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-400">#{index + 1}</span>
+                        <span className="font-semibold text-slate-900 text-sm">{r.studentName}</span>
+                      </div>
                       <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold',
                         pct >= 75 ? 'bg-emerald-50 text-emerald-700' : pct >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600')}>
                         {pct}%

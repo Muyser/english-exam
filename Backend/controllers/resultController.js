@@ -33,8 +33,7 @@ export const getAllResultsPDF = async (req, res) => {
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
 
-    // Safely check if custom TTF font exists on Render server
-    const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf'); 
+    const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
     const hasFont = fs.existsSync(fontPath);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -48,16 +47,15 @@ export const getAllResultsPDF = async (req, res) => {
     if (hasFont) {
       try {
         doc.font(fontPath);
-      } catch (fontErr) {
-        console.error('Failed to load font file, defaulting to Helvetica:', fontErr.message);
+      } catch (e) {
         doc.font('Helvetica-Bold');
       }
     } else {
       doc.font('Helvetica-Bold');
     }
 
-    // Title
-    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
+    // Header Title
+    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
@@ -69,15 +67,17 @@ export const getAllResultsPDF = async (req, res) => {
     const startX = 40;
     let y = doc.y;
 
+    // Table Header with # column
     const drawHeader = (currentY) => {
       doc.rect(startX, currentY, 515, 22).fill('#1e293b');
       doc.fillColor('#ffffff').fontSize(9);
-      doc.text('Student Name', startX + 10, currentY + 6, { width: 150 });
-      doc.text('Score', startX + 170, currentY + 6, { width: 60, align: 'center' });
+      doc.text('#', startX + 8, currentY + 6, { width: 25, align: 'center' });
+      doc.text('Student Name', startX + 35, currentY + 6, { width: 145 });
+      doc.text('Score', startX + 180, currentY + 6, { width: 55, align: 'center' });
       doc.text('Percentage', startX + 240, currentY + 6, { width: 65, align: 'center' });
-      doc.text('Correct', startX + 315, currentY + 6, { width: 50, align: 'center' });
-      doc.text('Wrong', startX + 370, currentY + 6, { width: 50, align: 'center' });
-      doc.text('Date', startX + 430, currentY + 6, { width: 75, align: 'center' });
+      doc.text('Correct', startX + 310, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Wrong', startX + 365, currentY + 6, { width: 50, align: 'center' });
+      doc.text('Date', startX + 425, currentY + 6, { width: 80, align: 'center' });
     };
 
     drawHeader(y);
@@ -105,31 +105,41 @@ export const getAllResultsPDF = async (req, res) => {
 
       const displayName = formatRTL(r.studentName);
 
-      doc.fillColor('#0f172a').fontSize(9);
-      doc.text(displayName, startX + 10, y + 5, { width: 150, ellipsis: true });
-      doc.text(`${score} / 100`, startX + 170, y + 5, { width: 60, align: 'center' });
+      // Row Number (1, 2, 3...)
+      doc.fillColor('#64748b').fontSize(9);
+      doc.text(`${index + 1}`, startX + 8, y + 5, { width: 25, align: 'center' });
 
+      // Student Name
+      doc.fillColor('#0f172a');
+      doc.text(displayName, startX + 35, y + 5, { width: 145, ellipsis: true });
+
+      // Score
+      doc.text(`${score} / 100`, startX + 180, y + 5, { width: 55, align: 'center' });
+
+      // Percentage
       const pctColor = pct >= 75 ? '#15803d' : pct >= 50 ? '#b45309' : '#dc2626';
       doc.fillColor(pctColor);
       doc.text(`${pct}%`, startX + 240, y + 5, { width: 65, align: 'center' });
 
+      // Correct & Wrong
       doc.fillColor('#16a34a');
-      doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 315, y + 5, { width: 50, align: 'center' });
+      doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 310, y + 5, { width: 50, align: 'center' });
 
       doc.fillColor('#dc2626');
-      doc.text(`${wrong}/${totalQ}`, startX + 370, y + 5, { width: 50, align: 'center' });
+      doc.text(`${wrong}/${totalQ}`, startX + 365, y + 5, { width: 50, align: 'center' });
 
+      // Date
       doc.fillColor('#475569');
-      doc.text(dateStr, startX + 430, y + 5, { width: 75, align: 'center' });
+      doc.text(dateStr, startX + 425, y + 5, { width: 80, align: 'center' });
 
       y += 20;
     });
 
     doc.end();
   } catch (error) {
-    console.error('Error generating PDF on Render:', error);
+    console.error('Error generating PDF:', error);
     if (!res.headersSent) {
-      res.status(500).json({ message: 'Failed to generate PDF: ' + error.message });
+      res.status(500).json({ message: error.message });
     }
   }
 };
