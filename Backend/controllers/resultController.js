@@ -77,7 +77,6 @@ export const getAllResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    // Header Title
     doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
@@ -490,7 +489,29 @@ export const getResultById = async (req, res) => {
   }
 };
 
-// 8. Delete Single Result
+// 8. Update Exam Result (FIXED: Exporting updateResult)
+export const updateResult = async (req, res) => {
+  try {
+    const { studentName, score, correctAnswers, wrongAnswers, totalQuestions, percentage } = req.body;
+
+    const result = await ExamResult.findById(req.params.id);
+    if (!result) return res.status(404).json({ message: 'Exam result not found' });
+
+    result.studentName = studentName !== undefined ? studentName : result.studentName;
+    result.score = score !== undefined ? score : result.score;
+    result.correctAnswers = correctAnswers !== undefined ? correctAnswers : result.correctAnswers;
+    result.wrongAnswers = wrongAnswers !== undefined ? wrongAnswers : result.wrongAnswers;
+    result.totalQuestions = totalQuestions !== undefined ? totalQuestions : result.totalQuestions;
+    result.percentage = percentage !== undefined ? percentage : result.percentage;
+
+    const updatedResult = await result.save();
+    res.json(updatedResult);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 9. Delete Single Result
 export const deleteResult = async (req, res) => {
   try {
     const deleted = await ExamResult.findByIdAndDelete(req.params.id);
@@ -501,7 +522,7 @@ export const deleteResult = async (req, res) => {
   }
 };
 
-// 9. Delete All Results
+// 10. Delete All Results
 export const deleteAllResults = async (req, res) => {
   try {
     await ExamResult.deleteMany({});
