@@ -9,7 +9,7 @@ import bidiFactory from 'bidi-js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Safely initialize bidi-js instance without top-level await
+// Initialize bidi-js instance
 let bidi = null;
 try {
   bidi = bidiFactory();
@@ -17,6 +17,7 @@ try {
   console.warn('bidi-js initialization skipped, falling back to standard text.');
 }
 
+// Reshapes Arabic cursive letters and reorders character sequence for PDFKit
 function formatRTL(text) {
   if (!text) return '—';
   const str = String(text);
@@ -26,7 +27,10 @@ function formatRTL(text) {
   try {
     // 1. Reshape disconnected Arabic letters into joined glyphs
     const reshaped = reshaper.ArabicShaper.convertArabic(str);
-    // 2. Reorder for PDFKit canvas rendering
+    
+    if (!bidi) return reshaped;
+
+    // 2. Reorder characters for PDFKit left-to-right canvas rendering
     const levels = bidi.getEmbeddingLevels(reshaped, 'rtl');
     return bidi.getReorderedString(reshaped, levels);
   } catch (err) {
@@ -34,7 +38,7 @@ function formatRTL(text) {
   }
 }
 
-// Helper to build robust date/time range query filters
+// Helper to build date/time range query filters
 const buildDateFilter = (startDate, endDate) => {
   const filter = {};
   if (startDate || endDate) {
@@ -82,7 +86,7 @@ export const getAllResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
@@ -183,7 +187,7 @@ export const getResultPDF = async (req, res) => {
     doc.pipe(res);
     applyFont(doc);
 
-    doc.fontSize(22).text('Noor Academy', { align: 'center' });
+    doc.fontSize(22).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.3);
     doc.fontSize(14).text('Official Exam Result Report', { align: 'center' });
     doc.moveDown(1);
@@ -213,7 +217,7 @@ export const getResultPDF = async (req, res) => {
     doc.text(`Wrong Questions / الأسئلة الخاطئة: ${Math.max(0, result.totalQuestions - result.correctAnswers)} / ${result.totalQuestions}`, 70, startY + 90);
 
     doc.moveDown(4);
-    doc.fillColor('#64748b').fontSize(10).text('Thank you for completing your exam with Noor Academy.', 50, 700, { align: 'center', width: 495 });
+    doc.fillColor('#64748b').fontSize(10).text('Thank you for completing your exam with Nour Academy.', 50, 700, { align: 'center', width: 495 });
 
     doc.end();
   } catch (error) {
@@ -250,7 +254,7 @@ export const getPassedResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#16a34a').fontSize(13).text('Passed Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
@@ -362,7 +366,7 @@ export const getFailedResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#dc2626').fontSize(13).text('Failed Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
@@ -494,7 +498,7 @@ export const getResultById = async (req, res) => {
   }
 };
 
-// 8. Update Exam Result (FIXED: Exporting updateResult)
+// 8. Update Exam Result
 export const updateResult = async (req, res) => {
   try {
     const { studentName, score, correctAnswers, wrongAnswers, totalQuestions, percentage } = req.body;
