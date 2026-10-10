@@ -27,7 +27,7 @@ function formatRTL(text) {
   }
 }
 
-// Helper to build date/time range query filters
+// Helper to build robust date/time range query filters
 const buildDateFilter = (startDate, endDate) => {
   const filter = {};
   if (startDate || endDate) {
@@ -49,7 +49,7 @@ function applyFont(doc) {
   }
 }
 
-// 1. Export All Results PDF (with optional date & time filter)
+// 1. Export All Results PDF (with date & time filter)
 export const getAllResultsPDF = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -82,8 +82,7 @@ export const getAllResultsPDF = async (req, res) => {
     doc.moveDown(0.5);
 
     if (!hasFont) doc.font('Helvetica');
-    const dateRangeText = startDate || endDate ? ` | Range: ${startDate || 'Start'} to ${endDate || 'Now'}` : '';
-    doc.fillColor('#64748b').fontSize(9).text(`Total Students: ${results.length}${dateRangeText} | Generated: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.fillColor('#64748b').fontSize(9).text(`Total Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
     doc.moveDown(1);
 
     const startX = 40;
@@ -216,7 +215,7 @@ export const getResultPDF = async (req, res) => {
   }
 };
 
-// 3. Export Passed Students Only (with optional date & time filter)
+// 3. Export Passed Students Only (with date & time filter)
 export const getPassedResultsPDF = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -326,7 +325,7 @@ export const getPassedResultsPDF = async (req, res) => {
   }
 };
 
-// 4. Export Failed Students Only (with optional date & time filter)
+// 4. Export Failed Students Only (with date & time filter)
 export const getFailedResultsPDF = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -465,7 +464,7 @@ export const createResult = async (req, res) => {
   }
 };
 
-// 6. Get All Results JSON (with optional date & time filter)
+// 6. Get All Results JSON (with date & time range filter)
 export const getResults = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;

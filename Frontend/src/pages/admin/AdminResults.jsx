@@ -65,12 +65,18 @@ export default function AdminResults() {
     return res.json();
   };
 
+  // Load Results with ISO Date Conversion
   const loadResults = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
+
+      if (startDate) {
+        params.append('startDate', new Date(startDate).toISOString());
+      }
+      if (endDate) {
+        params.append('endDate', new Date(endDate).toISOString());
+      }
 
       const endpoint = `/api/results${params.toString() ? `?${params.toString()}` : ''}`;
       const data = await authFetch(endpoint);
@@ -208,14 +214,19 @@ export default function AdminResults() {
     }
   };
 
-  // PDF Download Helper with Date Filters
+  // Download Filtered PDF Reports
   const downloadPDFWithFilters = async (endpoint, fileNamePrefix, setLoader) => {
     setLoader(true);
     try {
       const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
       const params = new URLSearchParams();
-      if (startDate) params.append('startDate', startDate);
-      if (endDate) params.append('endDate', endDate);
+
+      if (startDate) {
+        params.append('startDate', new Date(startDate).toISOString());
+      }
+      if (endDate) {
+        params.append('endDate', new Date(endDate).toISOString());
+      }
 
       const url = `${API_URL}${endpoint}${params.toString() ? `?${params.toString()}` : ''}`;
       const res = await fetch(url, {
