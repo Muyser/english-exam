@@ -200,8 +200,8 @@ const dict = {
     'pnf.goHome': 'العودة للرئيسية',
   },
   en: {
-    'common.brand': 'NOOR PRO ACADEMY',
-    'common.academy': 'Noor Pro Academy',
+    'common.brand': 'NOOR ACADEMY',
+    'common.academy': 'Noor Academy',
     'common.examSubtitle': 'Final Grammar Exam',
     'common.backHome': 'Back to Home',
     'common.back': 'Back',
@@ -261,7 +261,7 @@ const dict = {
 
     'alogin.backSite': 'Back to site',
     'alogin.title': 'Admin Login',
-    'alogin.subtitle': 'Noor Pro Academy — Administration',
+    'alogin.subtitle': 'Noor Academy — Administration',
     'alogin.errNotAdmin': 'This account does not have admin access.',
     'alogin.errInvalid': 'Invalid email or password',
     'alogin.email': 'Email',
@@ -270,7 +270,7 @@ const dict = {
     'alogin.signIn': 'Sign in',
     'alogin.note': 'Authorized personnel only. Student exams do not require login.',
 
-    'alayout.brand': 'Noor Pro',
+    'alayout.brand': 'Noor',
     'alayout.panel': 'Admin Panel',
     'alayout.overview': 'Overview',
     'alayout.questions': 'Questions',
@@ -278,7 +278,7 @@ const dict = {
     'alayout.settings': 'Exam Settings',
     'alayout.backSite': 'Back to site',
     'alayout.logout': 'Logout',
-    'alayout.mobileBrand': 'Noor Pro Admin',
+    'alayout.mobileBrand': 'Noor Admin',
 
     'dash.title': 'Overview',
     'dash.desc': 'Summary of your grammar exam activity.',
