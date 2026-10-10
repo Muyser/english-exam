@@ -1,4 +1,5 @@
 import ExamResult from '../models/ExamResult.js';
+import reshaper from 'arabic-persian-reshaper';
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
@@ -18,7 +19,19 @@ try {
 
 function formatRTL(text) {
   if (!text) return '—';
-  return String(text);
+  const str = String(text);
+  const containsArabic = /[\u0600-\u06FF]/.test(str);
+  if (!containsArabic) return str;
+
+  try {
+    // 1. Reshape disconnected Arabic letters into joined glyphs
+    const reshaped = reshaper.ArabicShaper.convertArabic(str);
+    // 2. Reorder for PDFKit canvas rendering
+    const levels = bidi.getEmbeddingLevels(reshaped, 'rtl');
+    return bidi.getReorderedString(reshaped, levels);
+  } catch (err) {
+    return str;
+  }
 }
 
 // Helper to build robust date/time range query filters
