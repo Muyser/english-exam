@@ -10,6 +10,7 @@ import {
   getAllResultsPDF,
   getPassedResultsPDF,
   getFailedResultsPDF,
+  getAttendancePDF,
 } from '../controllers/resultController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -22,6 +23,7 @@ router.get('/', protect, getResults);
 router.get('/export-pdf', protect, getAllResultsPDF);
 router.get('/export-passed-pdf', protect, getPassedResultsPDF);
 router.get('/export-failed-pdf', protect, getFailedResultsPDF);
+router.get('/export-attendance-pdf',protect, getAttendancePDF);
 
 router.get('/:id', protect, getResultById);
 router.get('/:id/pdf', protect, getResultPDF);

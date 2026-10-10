@@ -444,6 +444,91 @@ export const getFailedResultsPDF = async (req, res) => {
   }
 };
 
+// تصدير كشف الحضور (يحتوي فقط على الرقم واسم الطالب)
+export const getAttendancePDF = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const dateFilter = buildDateFilter(startDate, endDate);
+
+    const results = await ExamResult.find(dateFilter).sort({ createdAt: -1 });
+
+    const doc = new PDFDocument({ size: 'A4', margin: 40 });
+    const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
+    const hasFont = fs.existsSync(fontPath);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Attendance_List_${new Date().toISOString().split('T')[0]}.pdf"`
+    );
+
+    doc.pipe(res);
+
+    if (hasFont) {
+      try { doc.font(fontPath); } catch (e) { doc.font('Helvetica-Bold'); }
+    } else {
+      doc.font('Helvetica-Bold');
+    }
+
+    // عنوان الملف
+    doc.fillColor('#0f172a').fontSize(22).text('Nour Academy', { align: 'center' });
+    doc.moveDown(0.2);
+    doc.fillColor('#2563eb').fontSize(14).text('كشف حضور الطلاب / Student Attendance Sheet', { align: 'center' });
+    doc.moveDown(0.5);
+
+    if (!hasFont) doc.font('Helvetica');
+    doc.fillColor('#64748b').fontSize(10).text(`Total Attendance: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    doc.moveDown(1.5);
+
+    const startX = 50;
+    let y = doc.y;
+
+    // رأس الجدول (الرقم والاسم فقط)
+    const drawHeader = (currentY) => {
+      doc.rect(startX, currentY, 495, 25).fill('#1e293b');
+      doc.fillColor('#ffffff').fontSize(11);
+      doc.text('#', startX + 15, currentY + 7, { width: 40, align: 'center' });
+      doc.text('Student Name / اسم الطالب', startX + 70, currentY + 7, { width: 400, align: 'left' });
+    };
+
+    drawHeader(y);
+    y += 25;
+
+    // طباعة البيانات (الرقم والاسم فقط)
+    results.forEach((r, index) => {
+      if (y > 750) {
+        doc.addPage();
+        if (hasFont) {
+          try { doc.font(fontPath); } catch (e) { doc.font('Helvetica'); }
+        }
+        y = 40;
+        drawHeader(y);
+        y += 25;
+      }
+
+      const bgColor = index % 2 === 0 ? '#f8fafc' : '#ffffff';
+      doc.rect(startX, y, 495, 22).fillAndStroke(bgColor, '#e2e8f0');
+
+      const displayName = formatRTL(r.studentName);
+
+      doc.fillColor('#64748b').fontSize(10);
+      doc.text(`${index + 1}`, startX + 15, y + 6, { width: 40, align: 'center' });
+
+      doc.fillColor('#0f172a').fontSize(10);
+      doc.text(displayName, startX + 70, y + 6, { width: 400, ellipsis: true });
+
+      y += 22;
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generating Attendance PDF:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+};
+
 // 5. Save Student Result
 export const createResult = async (req, res) => {
   try {
