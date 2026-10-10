@@ -471,7 +471,7 @@ export const getAttendancePDF = async (req, res) => {
     }
 
     // عنوان الملف
-    doc.fillColor('#0f172a').fontSize(22).text('Nour Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(22).text('Noor Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(14).text('كشف حضور الطلاب / Student Attendance Sheet', { align: 'center' });
     doc.moveDown(0.5);

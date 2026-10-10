@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Loader2, ListChecks, ClipboardList, TrendingUp, ArrowUp, ArrowDown, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, ListChecks, ClipboardList, TrendingUp, ArrowUp, ArrowDown, CheckCircle2, XCircle, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 
@@ -11,6 +11,7 @@ function StatCard({ icon: Icon, label, value, tone }) {
     blue: 'bg-blue-100 text-blue-700',
     amber: 'bg-amber-100 text-amber-700',
     red: 'bg-red-100 text-red-700',
+    purple: 'bg-purple-100 text-purple-700',
   };
   return (
     <Card className="p-5 border-slate-200">
@@ -71,9 +72,10 @@ export default function AdminDashboard() {
 
   if (!data) return <p className="text-muted-foreground">{t('dash.loadFail')}</p>;
 
-  // Safely check passed / failed values from statsData or fallback calculations
+  // Safely check values from statsData or fallback calculations
   const passedStudents = data.passedCount !== undefined ? data.passedCount : (data.passed || 0);
   const failedStudents = data.failedCount !== undefined ? data.failedCount : (data.failed || 0);
+  const totalAttendance = data.totalResults || 0;
 
   return (
     <div>
@@ -87,6 +89,10 @@ export default function AdminDashboard() {
         <StatCard icon={ListChecks} label={t('dash.activeQ')} value={data.activeQuestions || 0} tone="emerald" />
         <StatCard icon={ClipboardList} label={t('dash.totalResults')} value={data.totalResults || 0} tone="blue" />
         <StatCard icon={TrendingUp} label={t('dash.avg')} value={`${data.avg || 0}%`} tone="amber" />
+        
+        {/* New Attendance Card */}
+        <StatCard icon={UserCheck} label={isAr ? 'إجمالي الحضور' : 'Total Attendance'} value={totalAttendance} tone="purple" />
+        
         <StatCard icon={CheckCircle2} label={isAr ? 'الناجحين' : 'Passed Students'} value={passedStudents} tone="emerald" />
         <StatCard icon={XCircle} label={isAr ? 'الراسبين' : 'Failed Students'} value={failedStudents} tone="red" />
         <StatCard icon={ArrowUp} label={t('dash.high')} value={`${data.high || 0}%`} tone="emerald" />
