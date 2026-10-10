@@ -25,14 +25,8 @@ function formatRTL(text) {
   if (!containsArabic) return str;
 
   try {
-    // 1. Reshape disconnected Arabic letters into joined glyphs
-    const reshaped = reshaper.ArabicShaper.convertArabic(str);
-    
-    if (!bidi) return reshaped;
-
-    // 2. Reorder characters for PDFKit left-to-right canvas rendering
-    const levels = bidi.getEmbeddingLevels(reshaped, 'rtl');
-    return bidi.getReorderedString(reshaped, levels);
+    // Shape Arabic letters into connected cursive forms without reversing character sequence
+    return reshaper.ArabicShaper.convertArabic(str);
   } catch (err) {
     return str;
   }
