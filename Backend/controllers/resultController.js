@@ -25,8 +25,11 @@ function formatRTL(text) {
   if (!containsArabic) return str;
 
   try {
-    // Shape Arabic letters into connected cursive forms without reversing character sequence
-    return reshaper.ArabicShaper.convertArabic(str);
+    // 1. Reshape letters so they connect properly
+    const reshaped = reshaper.ArabicShaper.convertArabic(str);
+    
+    // 2. Reverse word order so PDFKit's LTR layout displays them naturally from right to left
+    return reshaped.split(' ').reverse().join(' ');
   } catch (err) {
     return str;
   }
