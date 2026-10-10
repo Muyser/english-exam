@@ -3,27 +3,29 @@ import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import bidiFactory from 'bidi-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Helper function to safely load bidi-js without breaking the server
+// Safely initialize bidi-js instance without top-level await
 let bidi = null;
 try {
-  const bidiModule = await import('bidi-js');
-  bidi = bidiModule.default ? bidiModule.default() : bidiModule();
+  bidi = bidiFactory();
 } catch (e) {
-  console.warn('bidi-js module not loaded, falling back to standard text.');
+  console.warn('bidi-js initialization skipped, falling back to standard text.');
 }
 
 function formatRTL(text) {
   if (!text) return '—';
-  const containsArabic = /[\u0600-\u06FF]/.test(text);
-  if (!containsArabic || !bidi) return text;
+  const textString = String(text);
+  const containsArabic = /[\u0600-\u06FF]/.test(textString);
+  if (!containsArabic || !bidi) return textString;
   try {
-    return bidi.getReorderedString(text, 'rtl');
+    const embeddingLevels = bidi.getEmbeddingLevels(textString, 'rtl');
+    return bidi.getReorderedString(textString, embeddingLevels);
   } catch (err) {
-    return text;
+    return textString;
   }
 }
 
