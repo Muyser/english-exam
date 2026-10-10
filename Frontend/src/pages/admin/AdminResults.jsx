@@ -65,7 +65,7 @@ export default function AdminResults() {
     return res.json();
   };
 
-  // Load Results with ISO Date Conversion
+  // Load Results with ISO UTC Date Conversion
   const loadResults = async () => {
     setLoading(true);
     try {
@@ -360,6 +360,7 @@ export default function AdminResults() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="ps-10 h-10 text-xs sm:text-sm"
+              dir="auto"
             />
           </div>
 
@@ -457,7 +458,10 @@ export default function AdminResults() {
                     return (
                       <tr key={r.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-3 py-3 text-center text-slate-500 font-medium tabular-nums">{index + 1}</td>
-                        <td className="px-4 py-3 font-medium text-slate-900">{r.studentName}</td>
+                        {/* Preserve exact natural text orientation for student names */}
+                        <td className="px-4 py-3 font-medium text-slate-900" dir="auto">
+                          {r.studentName}
+                        </td>
                         <td className="px-4 py-3 text-center text-slate-900 font-medium tabular-nums">{r.score}/100</td>
                         <td className="px-4 py-3 text-center">
                           <span className={cn('inline-block px-2 py-0.5 rounded-full text-xs font-semibold',
@@ -508,7 +512,8 @@ export default function AdminResults() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-slate-400">#{index + 1}</span>
-                        <span className="font-semibold text-slate-900 text-sm">{r.studentName}</span>
+                        {/* Natural text orientation for mobile name display */}
+                        <span className="font-semibold text-slate-900 text-sm" dir="auto">{r.studentName}</span>
                       </div>
                       <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold',
                         pct >= 75 ? 'bg-emerald-50 text-emerald-700' : pct >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600')}>
@@ -575,6 +580,7 @@ export default function AdminResults() {
                 <Input
                   value={editForm.studentName}
                   onChange={(e) => setEditForm({ ...editForm, studentName: e.target.value })}
+                  dir="auto"
                   required
                 />
               </div>
@@ -639,20 +645,34 @@ export default function AdminResults() {
           {viewTarget && (
             <div className="space-y-4">
               <dl className="divide-y divide-slate-100">
-                {[
-                  [isAr ? 'اسم الطالب' : 'Student Name', viewTarget.studentName],
-                  [isAr ? 'الدرجة الكلية' : 'Total Mark', `${viewTarget.score} / 100`],
-                  [isAr ? 'النسبة المئوية' : 'Percentage', `${viewTarget.percentage}%`],
-                  [isAr ? 'الأسئلة الصحيحة' : 'Correct Questions', `${viewTarget.correctAnswers} / ${viewTarget.totalQuestions}`],
-                  [isAr ? 'الأسئلة الخاطئة' : 'Wrong Questions', `${viewTarget.wrongAnswers} / ${viewTarget.totalQuestions}`],
-                  [isAr ? 'تاريخ الامتحان' : 'Date', new Date(viewTarget.created_date).toLocaleDateString()],
-                  [isAr ? 'وقت الامتحان' : 'Time', new Date(viewTarget.created_date).toLocaleTimeString()],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
-                    <dt className="text-muted-foreground">{k}</dt>
-                    <dd className="font-medium text-slate-900 text-start">{v ?? '—'}</dd>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
+                  <dt className="text-muted-foreground">{isAr ? 'اسم الطالب' : 'Student Name'}</dt>
+                  <dd className="font-medium text-slate-900 text-start" dir="auto">{viewTarget.studentName}</dd>
+                </div>
+                <div className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
+                  <dt className="text-muted-foreground">{isAr ? 'الدرجة الكلية' : 'Total Mark'}</dt>
+                  <dd className="font-medium text-slate-900 text-start">{viewTarget.score} / 100</dd>
+                </div>
+                <div className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
+                  <dt className="text-muted-foreground">{isAr ? 'النسبة المئوية' : 'Percentage'}</dt>
+                  <dd className="font-medium text-slate-900 text-start">{viewTarget.percentage}%</dd>
+                </div>
+                <div className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
+                  <dt className="text-muted-foreground">{isAr ? 'الأسئلة الصحيحة' : 'Correct Questions'}</dt>
+                  <dd className="font-medium text-slate-900 text-start">{viewTarget.correctAnswers} / {viewTarget.totalQuestions}</dd>
+                </div>
+                <div className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
+                  <dt className="text-muted-foreground">{isAr ? 'الأسئلة الخاطئة' : 'Wrong Questions'}</dt>
+                  <dd className="font-medium text-slate-900 text-start">{viewTarget.wrongAnswers} / {viewTarget.totalQuestions}</dd>
+                </div>
+                <div className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
+                  <dt className="text-muted-foreground">{isAr ? 'تاريخ الامتحان' : 'Date'}</dt>
+                  <dd className="font-medium text-slate-900 text-start">{new Date(viewTarget.created_date).toLocaleDateString()}</dd>
+                </div>
+                <div className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
+                  <dt className="text-muted-foreground">{isAr ? 'وقت الامتحان' : 'Time'}</dt>
+                  <dd className="font-medium text-slate-900 text-start">{new Date(viewTarget.created_date).toLocaleTimeString()}</dd>
+                </div>
               </dl>
 
               <button
@@ -676,11 +696,11 @@ export default function AdminResults() {
               <div className="w-9 h-9 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
-              <AlertDialogTitle className="text-base font-semibold text-slate-900">
+              <AlertDialogTitle className="text-base font-semibold text-slate-900" dir="auto">
                 {isAr ? `حذف نتيجة ${deleteTarget?.studentName || ''}` : `Delete result for ${deleteTarget?.studentName || 'student'}`}
               </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-xs sm:text-sm text-slate-600 pt-1">
+            <AlertDialogDescription className="text-xs sm:text-sm text-slate-600 pt-1" dir="auto">
               {isAr
                 ? `هل أنت تأكيد من رغبتك في حذف نتيجة الطالب "${deleteTarget?.studentName}"؟ لا يمكنك التراجع عن هذا الإجراء.`
                 : `Are you sure you want to delete the result for "${deleteTarget?.studentName}"? This action cannot be undone.`}

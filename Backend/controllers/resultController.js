@@ -18,15 +18,7 @@ try {
 
 function formatRTL(text) {
   if (!text) return '—';
-  const textString = String(text);
-  const containsArabic = /[\u0600-\u06FF]/.test(textString);
-  if (!containsArabic || !bidi) return textString;
-  try {
-    const embeddingLevels = bidi.getEmbeddingLevels(textString, 'rtl');
-    return bidi.getReorderedString(textString, embeddingLevels);
-  } catch (err) {
-    return textString;
-  }
+  return String(text);
 }
 
 // Helper to build robust date/time range query filters
