@@ -27,12 +27,37 @@ function formatRTL(text) {
   }
 }
 
+// Helper to build date/time range query filters
+const buildDateFilter = (startDate, endDate) => {
+  const filter = {};
+  if (startDate || endDate) {
+    filter.createdAt = {};
+    if (startDate) filter.createdAt.$gte = new Date(startDate);
+    if (endDate) filter.createdAt.$lte = new Date(endDate);
+  }
+  return filter;
+};
+
+// Helper to configure fonts safely
+function applyFont(doc) {
+  const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
+  if (fs.existsSync(fontPath)) {
+    doc.registerFont('AmiriFont', fontPath);
+    doc.font('AmiriFont');
+  } else {
+    doc.font('Helvetica');
+  }
+}
+
+// 1. Export All Results PDF (with optional date & time filter)
 export const getAllResultsPDF = async (req, res) => {
   try {
-    const results = await ExamResult.find().sort({ createdAt: -1 });
+    const { startDate, endDate } = req.query;
+    const dateFilter = buildDateFilter(startDate, endDate);
+
+    const results = await ExamResult.find(dateFilter).sort({ createdAt: -1 });
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
-
     const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
     const hasFont = fs.existsSync(fontPath);
 
@@ -45,11 +70,7 @@ export const getAllResultsPDF = async (req, res) => {
     doc.pipe(res);
 
     if (hasFont) {
-      try {
-        doc.font(fontPath);
-      } catch (e) {
-        doc.font('Helvetica-Bold');
-      }
+      try { doc.font(fontPath); } catch (e) { doc.font('Helvetica-Bold'); }
     } else {
       doc.font('Helvetica-Bold');
     }
@@ -61,13 +82,13 @@ export const getAllResultsPDF = async (req, res) => {
     doc.moveDown(0.5);
 
     if (!hasFont) doc.font('Helvetica');
-    doc.fillColor('#64748b').fontSize(9).text(`Total Students: ${results.length} | Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
+    const dateRangeText = startDate || endDate ? ` | Range: ${startDate || 'Start'} to ${endDate || 'Now'}` : '';
+    doc.fillColor('#64748b').fontSize(9).text(`Total Students: ${results.length}${dateRangeText} | Generated: ${new Date().toLocaleDateString()}`, { align: 'center' });
     doc.moveDown(1);
 
     const startX = 40;
     let y = doc.y;
 
-    // Table Header with # column
     const drawHeader = (currentY) => {
       doc.rect(startX, currentY, 515, 22).fill('#1e293b');
       doc.fillColor('#ffffff').fontSize(9);
@@ -105,30 +126,24 @@ export const getAllResultsPDF = async (req, res) => {
 
       const displayName = formatRTL(r.studentName);
 
-      // Row Number (1, 2, 3...)
       doc.fillColor('#64748b').fontSize(9);
       doc.text(`${index + 1}`, startX + 8, y + 5, { width: 25, align: 'center' });
 
-      // Student Name
       doc.fillColor('#0f172a');
       doc.text(displayName, startX + 35, y + 5, { width: 145, ellipsis: true });
 
-      // Score
       doc.text(`${score} / 100`, startX + 180, y + 5, { width: 55, align: 'center' });
 
-      // Percentage
       const pctColor = pct >= 75 ? '#15803d' : pct >= 50 ? '#b45309' : '#dc2626';
       doc.fillColor(pctColor);
       doc.text(`${pct}%`, startX + 240, y + 5, { width: 65, align: 'center' });
 
-      // Correct & Wrong
       doc.fillColor('#16a34a');
       doc.text(`${r.correctAnswers || 0}/${totalQ}`, startX + 310, y + 5, { width: 50, align: 'center' });
 
       doc.fillColor('#dc2626');
       doc.text(`${wrong}/${totalQ}`, startX + 365, y + 5, { width: 50, align: 'center' });
 
-      // Date
       doc.fillColor('#475569');
       doc.text(dateStr, startX + 425, y + 5, { width: 80, align: 'center' });
 
@@ -144,18 +159,7 @@ export const getAllResultsPDF = async (req, res) => {
   }
 };
 
-// Helper to configure fonts safely
-function applyFont(doc) {
-  const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
-  if (fs.existsSync(fontPath)) {
-    doc.registerFont('AmiriFont', fontPath);
-    doc.font('AmiriFont');
-  } else {
-    doc.font('Helvetica');
-  }
-}
-
-// 1. Download Single Student PDF
+// 2. Download Single Student PDF
 export const getResultPDF = async (req, res) => {
   try {
     const result = await ExamResult.findById(req.params.id);
@@ -174,7 +178,6 @@ export const getResultPDF = async (req, res) => {
     doc.pipe(res);
     applyFont(doc);
 
-    // Header
     doc.fontSize(22).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.3);
     doc.fontSize(14).text('Official Exam Result Report', { align: 'center' });
@@ -183,7 +186,6 @@ export const getResultPDF = async (req, res) => {
     doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#e2e8f0').lineWidth(1).stroke();
     doc.moveDown(1.5);
 
-    // Student Info
     const studentNameFormatted = formatRTL(result.studentName);
     doc.fontSize(12).text(`Student Name / اسم الطالب: ${studentNameFormatted}`);
     doc.moveDown(0.5);
@@ -196,7 +198,6 @@ export const getResultPDF = async (req, res) => {
     doc.text(`Status / الحالة: ${statusText}`);
     doc.moveDown(1.5);
 
-    // Score Summary Box
     const startY = doc.y;
     doc.rect(50, startY, 495, 120).fillAndStroke('#f8fafc', '#cbd5e1');
 
@@ -215,15 +216,18 @@ export const getResultPDF = async (req, res) => {
   }
 };
 
-// Export Passed Students Only (Percentage >= 50%)
+// 3. Export Passed Students Only (with optional date & time filter)
 export const getPassedResultsPDF = async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+    const dateFilter = buildDateFilter(startDate, endDate);
+
     const results = await ExamResult.find({
+      ...dateFilter,
       $or: [{ percentage: {$gte: 50 } }, { status: 'passed' }],
     }).sort({ createdAt: -1 });
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
-
     const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
     const hasFont = fs.existsSync(fontPath);
 
@@ -241,7 +245,6 @@ export const getPassedResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    // Header Title
     doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#16a34a').fontSize(13).text('Passed Students Exam Results Summary', { align: 'center' });
@@ -323,17 +326,20 @@ export const getPassedResultsPDF = async (req, res) => {
   }
 };
 
-// Export Failed Students Only (Percentage < 50%)
+// 4. Export Failed Students Only (with optional date & time filter)
 export const getFailedResultsPDF = async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+    const dateFilter = buildDateFilter(startDate, endDate);
+
     const results = await ExamResult.find({
+      ...dateFilter,
       $and: [
         { percentage: { $lt: 50 } },         { status: {$ne: 'passed' } }
       ]
     }).sort({ createdAt: -1 });
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
-
     const fontPath = path.join(__dirname, '../fonts/Amiri-Regular.ttf');
     const hasFont = fs.existsSync(fontPath);
 
@@ -351,7 +357,6 @@ export const getFailedResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    // Header Title
     doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#dc2626').fontSize(13).text('Failed Students Exam Results Summary', { align: 'center' });
@@ -433,8 +438,7 @@ export const getFailedResultsPDF = async (req, res) => {
   }
 };
 
-
-// 3. Save Student Result
+// 5. Save Student Result
 export const createResult = async (req, res) => {
   try {
     const { studentName, score, totalQuestions, correctAnswers, percentage, status, timeSpent, answersSummary } = req.body;
@@ -461,17 +465,20 @@ export const createResult = async (req, res) => {
   }
 };
 
-// 4. Get All Results JSON
+// 6. Get All Results JSON (with optional date & time filter)
 export const getResults = async (req, res) => {
   try {
-    const results = await ExamResult.find().sort({ createdAt: -1 });
+    const { startDate, endDate } = req.query;
+    const dateFilter = buildDateFilter(startDate, endDate);
+
+    const results = await ExamResult.find(dateFilter).sort({ createdAt: -1 });
     res.json(results);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// 5. Get Result By ID
+// 7. Get Result By ID
 export const getResultById = async (req, res) => {
   try {
     const result = await ExamResult.findById(req.params.id).populate('answersSummary.questionId');
@@ -482,7 +489,7 @@ export const getResultById = async (req, res) => {
   }
 };
 
-// 6. Delete Single Result
+// 8. Delete Single Result
 export const deleteResult = async (req, res) => {
   try {
     const deleted = await ExamResult.findByIdAndDelete(req.params.id);
@@ -493,7 +500,7 @@ export const deleteResult = async (req, res) => {
   }
 };
 
-// 7. Delete All Results
+// 9. Delete All Results
 export const deleteAllResults = async (req, res) => {
   try {
     await ExamResult.deleteMany({});

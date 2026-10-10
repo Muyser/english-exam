@@ -13,7 +13,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Search, ClipboardList, Eye, Trash2, Edit3, AlertTriangle, FileText, Download } from 'lucide-react';
+import { Loader2, Search, ClipboardList, Eye, Trash2, Edit3, AlertTriangle, FileText, Download, Calendar, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 
@@ -26,21 +26,23 @@ export default function AdminResults() {
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [downloadingPassed, setDownloadingPassed] = useState(false);
   const [downloadingFailed, setDownloadingFailed] = useState(false);
+
+  // Filters & Search
   const [search, setSearch] = useState('');
   const [scoreFilter, setScoreFilter] = useState('all');
   const [sort, setSort] = useState('latest');
-  const [viewTarget, setViewTarget] = useState(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-  // Edit / Update modal state
+  // Modals state
+  const [viewTarget, setViewTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [editForm, setEditForm] = useState({ studentName: '', score: 0, correctAnswers: 0, totalQuestions: 50 });
   const [updating, setUpdating] = useState(false);
 
-  // Single Delete modal state
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Delete All modal state
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
 
@@ -66,7 +68,13 @@ export default function AdminResults() {
   const loadResults = async () => {
     setLoading(true);
     try {
-      const data = await authFetch('/api/results');
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const endpoint = `/api/results${params.toString() ? `?${params.toString()}` : ''}`;
+      const data = await authFetch(endpoint);
+
       const normalized = (data || []).map((r) => {
         const correct = r.correctAnswers || 0;
         const totalQ = r.totalQuestions || 50;
@@ -84,7 +92,7 @@ export default function AdminResults() {
           percentage: calculatedPercentage,
           correctAnswers: correct,
           wrongAnswers: wrong,
-          created_date: r.created_date || r.createdAt || new Date().toISOString(),
+          created_date: r.createdAt || r.created_date || new Date().toISOString(),
         };
       });
       setResults(normalized);
@@ -97,7 +105,15 @@ export default function AdminResults() {
 
   useEffect(() => {
     loadResults();
-  }, []);
+  }, [startDate, endDate]);
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setScoreFilter('all');
+    setSort('latest');
+    setStartDate('');
+    setEndDate('');
+  };
 
   // Open Edit Dialog
   const handleOpenEdit = (result) => {
@@ -173,7 +189,7 @@ export default function AdminResults() {
     }
   };
 
-  // Delete All Results Handler
+  // Delete All Results
   const handleDeleteAllConfirm = async () => {
     setDeletingAll(true);
     try {
@@ -192,86 +208,43 @@ export default function AdminResults() {
     }
   };
 
-  // PDF Export Handlers
-  const handleDownloadAllPDF = async () => {
-    setDownloadingAll(true);
+  // PDF Download Helper with Date Filters
+  const downloadPDFWithFilters = async (endpoint, fileNamePrefix, setLoader) => {
+    setLoader(true);
     try {
       const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/results/export-pdf`, {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const url = `${API_URL}${endpoint}${params.toString() ? `?${params.toString()}` : ''}`;
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error('Failed to generate combined PDF');
+      if (!res.ok) throw new Error('Failed to generate PDF export');
 
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `All_Student_Results_${new Date().toISOString().split('T')[0]}.pdf`;
+      a.href = downloadUrl;
+      a.download = `${fileNamePrefix}_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (e) {
       toast({ title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF', description: e.message, variant: 'destructive' });
     } finally {
-      setDownloadingAll(false);
+      setLoader(false);
     }
   };
 
-  const handleDownloadPassedPDF = async () => {
-    setDownloadingPassed(true);
-    try {
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/results/export-passed-pdf`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  const handleDownloadAllPDF = () => downloadPDFWithFilters('/api/results/export-pdf', 'All_Exam_Results', setDownloadingAll);
+  const handleDownloadPassedPDF = () => downloadPDFWithFilters('/api/results/export-passed-pdf', 'Passed_Students_Results', setDownloadingPassed);
+  const handleDownloadFailedPDF = () => downloadPDFWithFilters('/api/results/export-failed-pdf', 'Failed_Students_Results', setDownloadingFailed);
 
-      if (!res.ok) throw new Error('Failed to generate passed students PDF');
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Passed_Students_Results_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      toast({ title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF', description: e.message, variant: 'destructive' });
-    } finally {
-      setDownloadingPassed(false);
-    }
-  };
-
-  const handleDownloadFailedPDF = async () => {
-    setDownloadingFailed(true);
-    try {
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/api/results/export-failed-pdf`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) throw new Error('Failed to generate failed students PDF');
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Failed_Students_Results_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      toast({ title: isAr ? 'فشل تحميل الملف' : 'Failed to download PDF', description: e.message, variant: 'destructive' });
-    } finally {
-      setDownloadingFailed(false);
-    }
-  };
-
-  const handleDownloadPDF = async (result) => {
+  const handleDownloadSinglePDF = async (result) => {
     setDownloadingId(result.id);
     try {
       const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
@@ -285,7 +258,7 @@ export default function AdminResults() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${result.studentName.replace(/\s+/g, '_')}_Result.pdf`;
+      a.download = `${(result.studentName || 'Student').replace(/\s+/g, '_')}_Result.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -299,10 +272,12 @@ export default function AdminResults() {
 
   const filtered = useMemo(() => {
     let list = results.slice();
+
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((r) => (r.studentName || '').toLowerCase().includes(s));
     }
+
     if (scoreFilter === 'high') list = list.filter((r) => (r.percentage || 0) >= 75);
     else if (scoreFilter === 'mid') list = list.filter((r) => (r.percentage || 0) >= 50 && (r.percentage || 0) < 75);
     else if (scoreFilter === 'low') list = list.filter((r) => (r.percentage || 0) < 50);
@@ -310,19 +285,20 @@ export default function AdminResults() {
     if (sort === 'highest') list.sort((a, b) => (b.percentage || 0) - (a.percentage || 0));
     else if (sort === 'lowest') list.sort((a, b) => (a.percentage || 0) - (b.percentage || 0));
     else list.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+
     return list;
   }, [results, search, scoreFilter, sort]);
 
   return (
     <div className="w-full space-y-4">
-      {/* Header and Action Toolbar */}
+      {/* Header and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{isAr ? 'نتائج الامتحانات' : 'Exam Results'}</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{isAr ? 'عرض وإدارة نتائج امتحانات الطلاب' : 'View and manage student exam scores'}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{isAr ? 'عرض وإدارة نتائج امتحانات الطلاب وتصدير التقارير' : 'View, filter, and export student exam scores'}</p>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Toolbar */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleDownloadAllPDF}
@@ -351,25 +327,32 @@ export default function AdminResults() {
             <span>{isAr ? 'الراسبين فقط PDF' : 'Export Failed PDF'}</span>
           </button>
 
-          {/* Delete All Results Button */}
           <button
             onClick={() => setDeleteAllConfirm(true)}
             disabled={results.length === 0}
-            className="h-10 px-3 bg-red-700 hover:bg-red-800 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0"
+            className="h-10 px-3 bg-red-800 hover:bg-red-900 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0"
           >
             <Trash2 className="w-4 h-4" />
-            <span>{isAr ? 'حذف جميع النتائج' : 'Delete All Results'}</span>
+            <span>{isAr ? 'حذف الجميع' : 'Delete All'}</span>
           </button>
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <Card className="p-3 sm:p-4 border-slate-200 mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="relative">
+      {/* Search & Date/Time Filter Panel */}
+      <Card className="p-3 sm:p-4 border-slate-200 mb-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+          {/* Search Box */}
+          <div className="relative md:col-span-2">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder={isAr ? 'بحث باسم الطالب...' : 'Search student...'} value={search} onChange={(e) => setSearch(e.target.value)} className="ps-10 h-10 text-xs sm:text-sm" />
+            <Input
+              placeholder={isAr ? 'بحث باسم الطالب...' : 'Search student...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="ps-10 h-10 text-xs sm:text-sm"
+            />
           </div>
+
+          {/* Score Filter */}
           <Select value={scoreFilter} onValueChange={setScoreFilter}>
             <SelectTrigger className="h-10 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -379,6 +362,8 @@ export default function AdminResults() {
               <SelectItem value="low">{isAr ? 'راسب (أقل من 50%)' : 'Low (<50%)'}</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Sort Order */}
           <Select value={sort} onValueChange={setSort}>
             <SelectTrigger className="h-10 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -387,10 +372,45 @@ export default function AdminResults() {
               <SelectItem value="lowest">{isAr ? 'الأقل درجة' : 'Lowest Score'}</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Reset Filters */}
+          <button
+            onClick={handleClearFilters}
+            className="h-10 px-3 border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{isAr ? 'إعادة ضبط' : 'Clear Filters'}</span>
+          </button>
         </div>
-        {(search || scoreFilter !== 'all') && (
-          <button onClick={() => { setSearch(''); setScoreFilter('all'); }} className="mt-3 text-xs text-slate-500 hover:text-slate-900">{isAr ? 'إعادة ضبط' : 'Clear Filters'}</button>
-        )}
+
+        {/* Date and Time Range Inputs */}
+        <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              {isAr ? 'من تاريخ ووقت' : 'From Date & Time'}
+            </Label>
+            <Input
+              type="datetime-local"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-10 text-xs sm:text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              {isAr ? 'إلى تاريخ ووقت' : 'To Date & Time'}
+            </Label>
+            <Input
+              type="datetime-local"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-10 text-xs sm:text-sm"
+            />
+          </div>
+        </div>
       </Card>
 
       {/* Results Table & Mobile Cards */}
@@ -400,11 +420,11 @@ export default function AdminResults() {
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-muted-foreground">
             <ClipboardList className="w-8 h-8 mx-auto mb-2 opacity-40" />
-            {isAr ? 'لا توجد نتائج مسجلة' : 'No results found'}
+            {isAr ? 'لا توجد نتائج مسجلة المطابقة للتصفية' : 'No matching results found'}
           </div>
         ) : (
           <>
-            {/* Desktop Table with Sequential Numbers */}
+            {/* Desktop Table View */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-xs text-muted-foreground border-b border-slate-200">
@@ -413,9 +433,9 @@ export default function AdminResults() {
                     <th className="text-start font-medium px-4 py-3">{isAr ? 'الطالب' : 'Student'}</th>
                     <th className="text-center font-medium px-4 py-3">{isAr ? 'الدرجة' : 'Score'}</th>
                     <th className="text-center font-medium px-4 py-3">%</th>
-                    <th className="text-center font-medium px-4 py-3">{isAr ? 'أسئلة صحيحة' : 'Correct Questions'}</th>
-                    <th className="text-center font-medium px-4 py-3">{isAr ? 'أسئلة خاطئة' : 'Wrong Questions'}</th>
-                    <th className="text-start font-medium px-4 py-3 hidden md:table-cell">{isAr ? 'التاريخ' : 'Date'}</th>
+                    <th className="text-center font-medium px-4 py-3">{isAr ? 'أسئلة صحيحة' : 'Correct'}</th>
+                    <th className="text-center font-medium px-4 py-3">{isAr ? 'أسئلة خاطئة' : 'Wrong'}</th>
+                    <th className="text-start font-medium px-4 py-3 hidden md:table-cell">{isAr ? 'التاريخ والوقت' : 'Date & Time'}</th>
                     <th className="px-4 py-3 text-end font-medium">{isAr ? 'الإجراءات' : 'Actions'}</th>
                   </tr>
                 </thead>
@@ -436,11 +456,13 @@ export default function AdminResults() {
                         </td>
                         <td className="px-4 py-3 text-center text-emerald-600 font-medium">{r.correctAnswers}/{r.totalQuestions}</td>
                         <td className="px-4 py-3 text-center text-red-500 font-medium">{r.wrongAnswers}/{r.totalQuestions}</td>
-                        <td className="px-4 py-3 text-slate-600 hidden md:table-cell">{new Date(r.created_date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-slate-600 text-xs hidden md:table-cell">
+                          {new Date(r.created_date).toLocaleString()}
+                        </td>
                         <td className="px-4 py-3 text-end">
                           <div className="flex items-center justify-end gap-1">
                             <button
-                              onClick={() => handleDownloadPDF(r)}
+                              onClick={() => handleDownloadSinglePDF(r)}
                               disabled={isPdfLoading}
                               title={isAr ? 'تحميل تقرير PDF' : 'Download PDF Report'}
                               className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors disabled:opacity-50"
@@ -465,7 +487,7 @@ export default function AdminResults() {
               </table>
             </div>
 
-            {/* Mobile View with Sequential Numbers */}
+            {/* Mobile View */}
             <div className="sm:hidden divide-y divide-slate-100">
               {filtered.map((r, index) => {
                 const pct = r.percentage || 0;
@@ -499,10 +521,10 @@ export default function AdminResults() {
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] text-slate-500">{new Date(r.created_date).toLocaleDateString()}</span>
+                      <span className="text-[11px] text-slate-500">{new Date(r.created_date).toLocaleString()}</span>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleDownloadPDF(r)}
+                          onClick={() => handleDownloadSinglePDF(r)}
                           disabled={isPdfLoading}
                           className="p-1 rounded-md hover:bg-blue-50 text-blue-600 disabled:opacity-50"
                         >
@@ -531,7 +553,7 @@ export default function AdminResults() {
         <p className="text-xs text-muted-foreground mt-3">{`عرض ${filtered.length} من أصل ${results.length} نتيجة`}</p>
       )}
 
-      {/* Edit / Update Result Dialog */}
+      {/* Edit Result Modal */}
       <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
         <DialogContent className="max-w-md w-[92vw] sm:w-full rounded-2xl">
           <DialogHeader><DialogTitle>{isAr ? 'تحديث نتيجة الطالب' : 'Update Student Result'}</DialogTitle></DialogHeader>
@@ -612,9 +634,8 @@ export default function AdminResults() {
                   [isAr ? 'النسبة المئوية' : 'Percentage', `${viewTarget.percentage}%`],
                   [isAr ? 'الأسئلة الصحيحة' : 'Correct Questions', `${viewTarget.correctAnswers} / ${viewTarget.totalQuestions}`],
                   [isAr ? 'الأسئلة الخاطئة' : 'Wrong Questions', `${viewTarget.wrongAnswers} / ${viewTarget.totalQuestions}`],
-                  [isAr ? 'اسم الامتحان' : 'Exam Name', viewTarget.examName || 'Final Grammar Exam'],
-                  [isAr ? 'التاريخ' : 'Date', new Date(viewTarget.created_date).toLocaleDateString()],
-                  [isAr ? 'الوقت' : 'Time', new Date(viewTarget.created_date).toLocaleTimeString()],
+                  [isAr ? 'تاريخ الامتحان' : 'Date', new Date(viewTarget.created_date).toLocaleDateString()],
+                  [isAr ? 'وقت الامتحان' : 'Time', new Date(viewTarget.created_date).toLocaleTimeString()],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between py-2.5 text-xs sm:text-sm">
                     <dt className="text-muted-foreground">{k}</dt>
@@ -624,7 +645,7 @@ export default function AdminResults() {
               </dl>
 
               <button
-                onClick={() => handleDownloadPDF(viewTarget)}
+                onClick={() => handleDownloadSinglePDF(viewTarget)}
                 disabled={downloadingId === viewTarget.id}
                 className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
@@ -636,7 +657,7 @@ export default function AdminResults() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Single Result Confirmation Popup */}
+      {/* Single Delete Alert Modal */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent className="max-w-md w-[92vw] sm:w-full rounded-2xl p-4 sm:p-6">
           <AlertDialogHeader className="text-start">
@@ -670,7 +691,7 @@ export default function AdminResults() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete All Results Confirmation Popup */}
+      {/* Delete All Alert Modal */}
       <AlertDialog open={deleteAllConfirm} onOpenChange={setDeleteAllConfirm}>
         <AlertDialogContent className="max-w-md w-[92vw] sm:w-full rounded-2xl p-4 sm:p-6">
           <AlertDialogHeader className="text-start">
