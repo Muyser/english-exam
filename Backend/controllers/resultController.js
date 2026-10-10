@@ -77,7 +77,7 @@ export const getAllResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#2563eb').fontSize(13).text('All Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
@@ -178,7 +178,7 @@ export const getResultPDF = async (req, res) => {
     doc.pipe(res);
     applyFont(doc);
 
-    doc.fontSize(22).text('Nour Academy', { align: 'center' });
+    doc.fontSize(22).text('Noor Academy', { align: 'center' });
     doc.moveDown(0.3);
     doc.fontSize(14).text('Official Exam Result Report', { align: 'center' });
     doc.moveDown(1);
@@ -208,7 +208,7 @@ export const getResultPDF = async (req, res) => {
     doc.text(`Wrong Questions / الأسئلة الخاطئة: ${Math.max(0, result.totalQuestions - result.correctAnswers)} / ${result.totalQuestions}`, 70, startY + 90);
 
     doc.moveDown(4);
-    doc.fillColor('#64748b').fontSize(10).text('Thank you for completing your exam with Nour Academy.', 50, 700, { align: 'center', width: 495 });
+    doc.fillColor('#64748b').fontSize(10).text('Thank you for completing your exam with Noor Academy.', 50, 700, { align: 'center', width: 495 });
 
     doc.end();
   } catch (error) {
@@ -245,7 +245,7 @@ export const getPassedResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#16a34a').fontSize(13).text('Passed Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
@@ -357,7 +357,7 @@ export const getFailedResultsPDF = async (req, res) => {
       doc.font('Helvetica-Bold');
     }
 
-    doc.fillColor('#0f172a').fontSize(20).text('Nour Academy', { align: 'center' });
+    doc.fillColor('#0f172a').fontSize(20).text('Noor Academy', { align: 'center' });
     doc.moveDown(0.2);
     doc.fillColor('#dc2626').fontSize(13).text('Failed Students Exam Results Summary', { align: 'center' });
     doc.moveDown(0.5);
